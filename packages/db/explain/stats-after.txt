@@ -1,18 +1,18 @@
 -- GET /api/stats reading the user_daily_stats rollup (shipped)
 -- user: 00000000-0000-4000-9000-000000000074
 
-Sort  (cost=108.45..108.53 rows=30 width=44) (actual time=0.770..0.772 rows=30 loops=1)
+Sort  (cost=108.45..108.53 rows=30 width=44) (actual time=0.828..0.830 rows=30 loops=1)
   Sort Key: ((day)::text)
   Sort Method: quicksort  Memory: 26kB
-  Buffers: shared hit=35
-  ->  Bitmap Heap Scan on user_daily_stats  (cost=4.60..107.71 rows=30 width=44) (actual time=0.158..0.732 rows=30 loops=1)
+  Buffers: shared hit=386
+  ->  Bitmap Heap Scan on user_daily_stats  (cost=4.60..107.71 rows=30 width=44) (actual time=0.122..0.779 rows=30 loops=1)
         Recheck Cond: ((user_id = '00000000-0000-4000-9000-000000000074'::uuid) AND (day > (((now() AT TIME ZONE 'utc'::text))::date - 30)))
-        Heap Blocks: exact=29
-        Buffers: shared hit=32
-        ->  Bitmap Index Scan on user_daily_stats_pkey  (cost=0.00..4.59 rows=30 width=0) (actual time=0.115..0.115 rows=30 loops=1)
+        Heap Blocks: exact=381
+        Buffers: shared hit=383
+        ->  Bitmap Index Scan on user_daily_stats_pkey  (cost=0.00..4.59 rows=30 width=0) (actual time=0.062..0.062 rows=414 loops=1)
               Index Cond: ((user_id = '00000000-0000-4000-9000-000000000074'::uuid) AND (day > (((now() AT TIME ZONE 'utc'::text))::date - 30)))
-              Buffers: shared hit=3
+              Buffers: shared hit=2
 Planning:
   Buffers: shared hit=53
-Planning Time: 0.355 ms
-Execution Time: 0.796 ms
+Planning Time: 0.246 ms
+Execution Time: 0.857 ms

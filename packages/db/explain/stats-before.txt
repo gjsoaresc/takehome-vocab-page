@@ -1,23 +1,23 @@
 -- GET /api/stats computed from raw events (naive approach, not shipped)
 -- user: 00000000-0000-4000-9000-000000000074
 
-GroupAggregate  (cost=2030.96..2123.65 rows=2852 width=20) (actual time=8.065..8.540 rows=61 loops=1)
+GroupAggregate  (cost=2036.16..2130.48 rows=2902 width=20) (actual time=2.719..3.214 rows=61 loops=1)
   Group Key: (((created_at AT TIME ZONE 'utc'::text))::date)
   Buffers: shared hit=1469
-  ->  Sort  (cost=2030.96..2038.09 rows=2852 width=14) (actual time=8.057..8.196 rows=2929 loops=1)
+  ->  Sort  (cost=2036.16..2043.42 rows=2902 width=14) (actual time=2.712..2.858 rows=2929 loops=1)
         Sort Key: (((created_at AT TIME ZONE 'utc'::text))::date)
         Sort Method: quicksort  Memory: 188kB
         Buffers: shared hit=1469
-        ->  Bitmap Heap Scan on events  (cost=134.36..1867.29 rows=2852 width=14) (actual time=5.830..7.666 rows=2929 loops=1)
+        ->  Bitmap Heap Scan on events  (cost=134.91..1869.26 rows=2902 width=14) (actual time=0.668..2.340 rows=2929 loops=1)
               Recheck Cond: (user_id = '00000000-0000-4000-9000-000000000074'::uuid)
               Filter: (type = ANY ('{rated,graded,matched}'::text[]))
               Rows Removed by Filter: 549
               Heap Blocks: exact=1434
               Buffers: shared hit=1466
-              ->  Bitmap Index Scan on events_user_created_idx  (cost=0.00..133.65 rows=3364 width=0) (actual time=5.513..5.513 rows=3478 loops=1)
+              ->  Bitmap Index Scan on events_user_created_idx  (cost=0.00..134.19 rows=3436 width=0) (actual time=0.540..0.540 rows=3478 loops=1)
                     Index Cond: (user_id = '00000000-0000-4000-9000-000000000074'::uuid)
                     Buffers: shared hit=32
 Planning:
-  Buffers: shared hit=85
-Planning Time: 0.406 ms
-Execution Time: 8.632 ms
+  Buffers: shared hit=87
+Planning Time: 0.454 ms
+Execution Time: 3.301 ms

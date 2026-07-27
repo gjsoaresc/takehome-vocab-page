@@ -15,5 +15,43 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    environment:
+      DATABASE_URL: postgres://vocab:vocab@postgres:5432/vocab
+      API_PORT: 3001
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - '8080:80'
+    depends_on:
+      - api
+
+  # One-shot: docker compose run --rm seed
+  # Applies schema + functions, loads the word seed, generates the
+  # 120k-event practice history, replays it, ANALYZEs.
+  seed:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: seed
+    profiles: ['tools']
+    environment:
+      DATABASE_URL: postgres://vocab:vocab@postgres:5432/vocab
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   vocab-postgres:

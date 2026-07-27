@@ -1,20 +1,20 @@
 -- review_next due-words scan WITH progress(user_id, due_at) index (shipped)
 -- user: 00000000-0000-4000-9000-000000000074
 
-Limit  (cost=1662.14..1662.17 rows=10 width=20) (actual time=0.873..0.874 rows=10 loops=1)
-  Buffers: shared hit=553
-  ->  Sort  (cost=1662.14..1664.08 rows=777 width=20) (actual time=0.872..0.873 rows=10 loops=1)
+Limit  (cost=1608.23..1608.25 rows=10 width=20) (actual time=1.271..1.273 rows=10 loops=1)
+  Buffers: shared hit=1468
+  ->  Sort  (cost=1608.23..1610.07 rows=736 width=20) (actual time=1.271..1.272 rows=10 loops=1)
         Sort Key: (((miss_count)::double precision / (GREATEST((correct_count + miss_count), 1))::double precision)) DESC, due_at
         Sort Method: top-N heapsort  Memory: 25kB
-        Buffers: shared hit=553
-        ->  Bitmap Heap Scan on progress p  (cost=52.38..1645.35 rows=777 width=20) (actual time=0.326..0.820 rows=634 loops=1)
+        Buffers: shared hit=1468
+        ->  Bitmap Heap Scan on progress p  (cost=47.96..1592.32 rows=736 width=20) (actual time=0.461..1.219 rows=634 loops=1)
               Recheck Cond: ((user_id = '00000000-0000-4000-9000-000000000074'::uuid) AND (due_at <= now()))
-              Heap Blocks: exact=535
-              Buffers: shared hit=553
-              ->  Bitmap Index Scan on progress_user_due_idx  (cost=0.00..52.19 rows=777 width=0) (actual time=0.285..0.285 rows=634 loops=1)
+              Heap Blocks: exact=1450
+              Buffers: shared hit=1468
+              ->  Bitmap Index Scan on progress_user_due_idx  (cost=0.00..47.78 rows=736 width=0) (actual time=0.339..0.339 rows=3243 loops=1)
                     Index Cond: ((user_id = '00000000-0000-4000-9000-000000000074'::uuid) AND (due_at <= now()))
                     Buffers: shared hit=18
 Planning:
   Buffers: shared hit=19
-Planning Time: 0.154 ms
-Execution Time: 0.899 ms
+Planning Time: 0.157 ms
+Execution Time: 1.300 ms
