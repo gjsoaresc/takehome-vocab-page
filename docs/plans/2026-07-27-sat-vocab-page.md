@@ -3,7 +3,7 @@
 Created: 2026-07-27
 Author: jacob@evren.gg
 Agent: Claude Code
-Status: PENDING
+Status: VERIFIED
 Approved: Yes
 Iterations: 0
 Worktree: No
@@ -32,7 +32,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 ## Runtime Environment
 
 - **Dev DB:** `docker compose up -d postgres` → Postgres 17 on `localhost:5432`, db/user/pass `vocab`/`vocab`/`vocab`.
-- **Install / run:** `bun install`; `bun run db:setup` (schema + functions + word seed); `bun run dev` (turbo: api on `:3001`, web on `:3000`).
+- **Install / run:** `bun install`; `bun run db:migrate` (schema + functions) + `bun run db:seed` (words + fake history); `bun run dev` (turbo: api on `:3001`, web on `:3000`).
 - **Health check:** `curl localhost:3001/healthz` → `{"ok":true}`.
 - **Full app in Docker:** `docker compose up --build` → web on `localhost:8080` (Task 14).
 - **Tests:** `bun run test` (turbo). API/db integration tests need the dev postgres container running; they create/reset a `vocab_test` database.
@@ -65,7 +65,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - [x] Task 11: Matching mode
 - [x] Task 12: Game mode — Word Rush
 - [x] Task 13: Stats dashboard
-- [ ] Task 14: Dockerfiles + full compose + final README
+- [x] Task 14: Dockerfiles + full compose + final README
 
 ## Implementation Tasks
 
@@ -499,3 +499,18 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 ## Deferred Ideas
 
 - Quiz fill-in-the-blank from example sentences (brief's "nice extra") — add after everything else is green if time allows.
+
+## E2E Results
+
+| Scenario | Priority | Result | Fix Attempts | Notes |
+|----------|----------|--------|--------------|-------|
+| TS-001 | Critical | PASS | 0 | Reveal + rate persists after reload (verified on dev AND docker stack) |
+| TS-002 | Critical | PASS | 0 | Quiz-graded word shows updated status in Learn after navigation |
+| TS-003 | Critical | PASS | 0 | Full 10-question w2d run, no repeats, missed links jump into Learn; d2w round played on docker stack |
+| TS-004 | Critical | PASS | 1 | Tap-pair, drag-pair (pointer events), wrong-pair shake, board completion; fix: guarded setPointerCapture |
+| TS-005 | High | PASS | 1 | Full 90s run, swipe + buttons, score/streak/game-over; fix: absolute-deadline timer (judgments froze clock) |
+| TS-006 | High | PASS | 0 | Seeded heavy user fully populated; fresh user gets designed empty state |
+| TS-007 | Critical | PASS | 0 | All six routes scrollWidth = 390 at 390x844; feedback everywhere icon+text, never color alone |
+| TS-008 | Medium | PASS | 1 | Arrow/Enter/1-4 keyboard flow; fix: focus follows via post-render effect |
+
+Design Notes: impeccable detect over the rendered home DOM: 0 findings — non-blocking, advisory pass clean.
