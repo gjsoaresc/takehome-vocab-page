@@ -150,8 +150,8 @@ describe('rebuild_from_events', () => {
     const before = await snapshot()
     expect(before.progress.length).toBeGreaterThan(0)
 
-    const [{ rebuild_from_events: replayed }] = await sql`SELECT rebuild_from_events()`
-    expect(replayed).toBe(200)
+    const [rebuilt] = await sql`SELECT rebuild_from_events()`
+    expect(rebuilt!.rebuild_from_events).toBe(200)
 
     const after = await snapshot()
     expect(JSON.parse(JSON.stringify(after))).toEqual(JSON.parse(JSON.stringify(before)))

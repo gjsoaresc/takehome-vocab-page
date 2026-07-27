@@ -57,8 +57,8 @@ describe('record_event idempotency', () => {
     const [second] = await call()
     expect((second!.r as { duplicate: boolean }).duplicate).toBe(true)
 
-    const [{ count }] = await sql`SELECT count(*)::int AS count FROM events`
-    expect(count).toBe(1)
+    const [countRow] = await sql`SELECT count(*)::int AS count FROM events`
+    expect(countRow!.count).toBe(1)
     expect(await getProgress()).toEqual(before)
     const [daily] = await sql`SELECT reviews, correct FROM user_daily_stats`
     expect(daily).toEqual({ reviews: 1, correct: 1 })
@@ -171,7 +171,7 @@ describe('rollups and non-scoring events', () => {
     expect(mode).toEqual({ attempts: 2, correct: 1 })
     const [daily] = await sql`SELECT reviews, correct FROM user_daily_stats`
     expect(daily).toEqual({ reviews: 2, correct: 1 })
-    const [{ count }] = await sql`SELECT count(*)::int AS count FROM events`
-    expect(count).toBe(3)
+    const [countRow] = await sql`SELECT count(*)::int AS count FROM events`
+    expect(countRow!.count).toBe(3)
   })
 })
