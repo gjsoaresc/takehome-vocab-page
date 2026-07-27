@@ -52,7 +52,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 
 ## Progress Tracking
 
-- [ ] Task 1: Monorepo scaffold, tooling, dev Postgres, git init
+- [x] Task 1: Monorepo scaffold, tooling, dev Postgres, git init
 - [ ] Task 2: PDF parser → committed `seed_words.sql` + parse report
 - [ ] Task 3: `schema.sql` — tables, constraints, indexes + migrate script
 - [ ] Task 4: PL/pgSQL — SM-2 `apply_review` + idempotent `record_event` ingest

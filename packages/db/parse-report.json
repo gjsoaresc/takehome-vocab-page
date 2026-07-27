@@ -1,0 +1,62 @@
+{
+  "totalPosMarkers": 1047,
+  "parsedWords": 991,
+  "parsedSenses": 1047,
+  "posCounts": {
+    "v": 273,
+    "n": 284,
+    "adj": 489,
+    "adv": 1
+  },
+  "skipped": [],
+  "posSuspects": [
+    {
+      "headword": "adhere",
+      "senseNo": 1,
+      "pos": "n",
+      "definition": "to stick to something",
+      "hint": "definition reads like a verb (starts with \"to\")"
+    },
+    {
+      "headword": "adhere",
+      "senseNo": 2,
+      "pos": "n",
+      "definition": "to follow devoutly",
+      "hint": "definition reads like a verb (starts with \"to\")"
+    },
+    {
+      "headword": "archetypal",
+      "senseNo": 1,
+      "pos": "adj",
+      "definition": "the most representative or typical example of something",
+      "hint": "definition reads like a noun (starts with an article/\"one who\")"
+    },
+    {
+      "headword": "palette",
+      "senseNo": 1,
+      "pos": "adj",
+      "definition": "a range of colors or qualities",
+      "hint": "definition reads like a noun (starts with an article/\"one who\")"
+    },
+    {
+      "headword": "prescient",
+      "senseNo": 1,
+      "pos": "adj",
+      "definition": "to have foreknowledge of events",
+      "hint": "definition reads like a verb (starts with \"to\")"
+    },
+    {
+      "headword": "renunciation",
+      "senseNo": 1,
+      "pos": "n",
+      "definition": "to reject",
+      "hint": "definition reads like a verb (starts with \"to\")"
+    }
+  ],
+  "orderAnomalies": [
+    {
+      "headword": "covert",
+      "previous": "covet"
+    }
+  ]
+}
