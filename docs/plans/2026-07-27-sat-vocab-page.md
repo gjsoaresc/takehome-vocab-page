@@ -59,7 +59,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - [x] Task 5: PL/pgSQL — `review_next` scheduler + `rebuild_from_events`
 - [x] Task 6: Hono API — all endpoints + integration tests
 - [x] Task 7: Seed script (300 users / 100k+ events), bench, EXPLAIN evidence
-- [ ] Task 8: Web shell — design foundation, router, anon user bootstrap
+- [x] Task 8: Web shell — design foundation, router, anon user bootstrap
 - [ ] Task 9: Learn mode
 - [ ] Task 10: Quiz mode
 - [ ] Task 11: Matching mode
