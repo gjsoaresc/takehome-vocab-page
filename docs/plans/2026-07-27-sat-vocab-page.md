@@ -55,7 +55,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - [x] Task 1: Monorepo scaffold, tooling, dev Postgres, git init
 - [x] Task 2: PDF parser → committed `seed_words.sql` + parse report
 - [x] Task 3: `schema.sql` — tables, constraints, indexes + migrate script
-- [ ] Task 4: PL/pgSQL — SM-2 `apply_review` + idempotent `record_event` ingest
+- [x] Task 4: PL/pgSQL — SM-2 `apply_review` + idempotent `record_event` ingest
 - [ ] Task 5: PL/pgSQL — `review_next` scheduler + `rebuild_from_events`
 - [ ] Task 6: Hono API — all endpoints + integration tests
 - [ ] Task 7: Seed script (300 users / 100k+ events), bench, EXPLAIN evidence
