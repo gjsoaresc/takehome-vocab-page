@@ -63,7 +63,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - [x] Task 9: Learn mode
 - [x] Task 10: Quiz mode
 - [x] Task 11: Matching mode
-- [ ] Task 12: Game mode — Word Rush
+- [x] Task 12: Game mode — Word Rush
 - [ ] Task 13: Stats dashboard
 - [ ] Task 14: Dockerfiles + full compose + final README
 
