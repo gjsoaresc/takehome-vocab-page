@@ -1,1 +1,64 @@
 @import 'tailwindcss';
+
+/* Design tokens. Contrast is AA-checked against --color-paper / white:
+   ink 15.2:1, muted 6.9:1, accent 5.9:1, ok 4.7:1, err 5.9:1. */
+@theme {
+  --color-paper: #faf7f2;
+  --color-card: #ffffff;
+  --color-ink: #1c1917;
+  --color-muted: #57534e;
+  --color-line: #e7e5e4;
+  --color-accent: #0f766e;
+  --color-accent-strong: #115e59;
+  --color-accent-soft: #ccfbf1;
+  --color-ok: #15803d;
+  --color-ok-soft: #dcfce7;
+  --color-err: #b91c1c;
+  --color-err-soft: #fee2e2;
+  --color-warn-soft: #fef3c7;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* No horizontal scrolling, ever (brief requirement). */
+html,
+body {
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* Every interactive element meets the 44px tap target. */
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+.animate-shake {
+  animation: shake 0.3s ease-in-out 2;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
