@@ -109,6 +109,15 @@ describe('SM-2 trajectory', () => {
     const p = await getProgress()
     expect(Number(p.ease)).toBe(1.3)
   })
+
+  it('caps the interval at 365 days (no unbounded geometric growth)', async () => {
+    // A frequently-correct word must not overflow: 20 straight successes
+    // would otherwise grow the interval past timestamp range.
+    for (let i = 0; i < 20; i++) await rate(5, days(i * 30))
+    const p = await getProgress()
+    expect(p.interval_days).toBe(365)
+    expect(p.mastered_at).not.toBeNull()
+  })
 })
 
 describe('mastery', () => {

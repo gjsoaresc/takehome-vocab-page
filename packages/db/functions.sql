@@ -49,11 +49,13 @@ BEGIN
     v_due := p_now + interval '10 minutes';
   ELSE
     v_reps := v_row.repetitions + 1;
-    v_interval := CASE v_reps
+    -- Interval is capped at 365 days (as in Anki's maximumInterval): without
+    -- a cap a frequently-correct word grows geometrically and overflows.
+    v_interval := LEAST(365, CASE v_reps
       WHEN 1 THEN 1
       WHEN 2 THEN 6
       ELSE round(v_row.interval_days * v_ease)::integer
-    END;
+    END);
     v_due := p_now + make_interval(days => v_interval);
   END IF;
 
