@@ -61,7 +61,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - [x] Task 7: Seed script (300 users / 100k+ events), bench, EXPLAIN evidence
 - [x] Task 8: Web shell — design foundation, router, anon user bootstrap
 - [x] Task 9: Learn mode
-- [ ] Task 10: Quiz mode
+- [x] Task 10: Quiz mode
 - [ ] Task 11: Matching mode
 - [ ] Task 12: Game mode — Word Rush
 - [ ] Task 13: Stats dashboard
