@@ -54,7 +54,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 
 - [x] Task 1: Monorepo scaffold, tooling, dev Postgres, git init
 - [x] Task 2: PDF parser → committed `seed_words.sql` + parse report
-- [ ] Task 3: `schema.sql` — tables, constraints, indexes + migrate script
+- [x] Task 3: `schema.sql` — tables, constraints, indexes + migrate script
 - [ ] Task 4: PL/pgSQL — SM-2 `apply_review` + idempotent `record_event` ingest
 - [ ] Task 5: PL/pgSQL — `review_next` scheduler + `rebuild_from_events`
 - [ ] Task 6: Hono API — all endpoints + integration tests
@@ -164,7 +164,7 @@ The brief's scoring is backend-weighted (75/100 on data/backend/scheduler/analyt
 - `record_event(p_event_id uuid, p_user uuid, p_mode text, p_type text, p_word int, p_sense int, p_correct bool, p_rating int, p_payload jsonb) RETURNS jsonb` — `INSERT … ON CONFLICT (event_id) DO NOTHING`; when no row inserted, return `{"duplicate": true}` untouched-state; otherwise map quality and update progress + rollups, return new progress for the word.
 - Quality mapping lives ONLY here: `rated` events use `p_rating` as-is (Learn buttons Again/Hard/Good/Easy → 1/3/4/5); `graded`/`matched` events map correct→4, incorrect→1; `revealed`/`game_finished` record the event but skip `apply_review`.
 - Rollup maintenance: upsert `user_daily_stats(reviews+1, correct+?, mastered±?)` and `user_mode_stats(attempts+1, correct+?)` for scoring events only.
-- Tests (vitest against `vocab_test`): (a) same `event_id` twice → 1 events row, progress and rollups byte-identical after 2nd call; (b) SM-2 trajectory for quality sequence 5,5,5 → intervals 1,6,15 with ease 2.6 → hand-computed expected values from the SM-2 spec, independent of the implementation; (c) q=2 resets repetitions and interval; (d) ease floors at 1.3; (e) mastery set at interval ≥21 and cleared on later miss; (f) the mastery decrement targets the ORIGINAL `date(mastered_at)` day's rollup row, not the miss day.
+- Tests (vitest against `vocab_test`): (a) same `event_id` twice → 1 events row, progress and rollups byte-identical after 2nd call; (b) SM-2 trajectory for quality sequence 5,5,5 → ease 2.6/2.7/2.8, intervals 1/6/17 (round(6 x 2.8)) → hand-computed expected values from the SM-2 spec, independent of the implementation; (c) q=2 resets repetitions and interval; (d) ease floors at 1.3; (e) mastery set at interval ≥21 and cleared on later miss; (f) the mastery decrement targets the ORIGINAL `date(mastered_at)` day's rollup row, not the miss day.
 
 **Definition of Done:**
 
