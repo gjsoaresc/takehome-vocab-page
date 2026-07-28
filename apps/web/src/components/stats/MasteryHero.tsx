@@ -91,7 +91,7 @@ export function MasteryHero({
           <p className="text-[12.5px] leading-[17px] text-ink">
             {next === null
               ? `Every one of the ${group(WORD_COUNT)} words mastered. Nothing left to unlock.`
-              : `${group(next - mastered)} more to the next milestone - ${group(next)} mastered`}
+              : `${group(next - mastered)} more to reach the ${group(next)}-word milestone`}
           </p>
           <span className="ml-auto flex-none text-[11px] font-semibold text-muted">
             {levelTitle}

@@ -8,7 +8,7 @@ import { parseVocab, toSeedSql } from './vocab-parser'
 
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(pkgRoot, '../..')
-const pdfPath = process.argv[2] ?? resolve(repoRoot, 'Vocab Page - Amadeu/sat.vocab.pdf')
+const pdfPath = process.argv[2] ?? resolve(repoRoot, 'docs/brief/sat.vocab.pdf')
 
 const pdf = await getDocumentProxy(new Uint8Array(readFileSync(pdfPath)))
 const { text: pages } = await extractText(pdf, { mergePages: false })

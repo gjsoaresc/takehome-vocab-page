@@ -190,14 +190,14 @@ and seeded plus empty states.
 - `packages/shared` — zod event schema + response types
 - `packages/db` — `schema.sql`, `functions.sql`, `seed_words.sql`,
   `parse-report.json`, parser/seed/bench/explain scripts, all database tests
+- `docs/brief` — the take-home brief and the source `sat.vocab.pdf`
 - `docs/plans` — the working plans this was built against (process evidence)
 - `docs/design` — the exported Claude Design canvas the UI is built to
   (gitignored: ~900 KB of generated reference HTML)
 
 ## Hours spent
 
-_To be filled in by the author._
-
-## Walkthrough video
-
-_To be added: 2-minute phone-viewport walkthrough with voice._
+About 4 hours end to end: one evening session for the backend (parser, schema,
+PL/pgSQL scheduler, API, seed and performance work) and the four modes with
+their verification pass, followed by the design-system and reward-layer pass
+the same night.

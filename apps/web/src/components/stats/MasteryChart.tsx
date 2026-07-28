@@ -40,6 +40,12 @@ export function MasteryChart({ data, streak }: { data: DayPoint[]; streak: numbe
   }
 
   const maxReviews = Math.max(1, ...days.map((d) => d.reviews))
+  // Scale against the 90th percentile of active days, not the outright max: a
+  // single heavy session (a 130-judgment Word Rush run) otherwise flattens
+  // every other bar to the 3px floor and the month reads as empty. The outlier
+  // still draws at full height, it just stops setting the scale.
+  const active = days.filter((d) => d.reviews > 0).map((d) => d.reviews).sort((a, b) => a - b)
+  const scale = Math.max(1, active[Math.floor(active.length * 0.9)] ?? maxReviews)
   const streakFrom = days.length - streak
   const totalReviews = days.reduce((a, d) => a + d.reviews, 0)
   const totalCorrect = days.reduce((a, d) => a + d.correct, 0)
@@ -70,7 +76,8 @@ export function MasteryChart({ data, streak }: { data: DayPoint[]; streak: numbe
       >
         {days.map((d, i) => {
           const inStreak = streak > 0 && i >= streakFrom
-          const height = d.reviews === 0 ? 3 : Math.max(4, Math.round((d.reviews / maxReviews) * 58))
+          const height =
+            d.reviews === 0 ? 3 : Math.min(58, Math.max(6, Math.round((d.reviews / scale) * 58)))
           return (
             <div key={d.day} className="flex h-full flex-1 flex-col justify-end" title={`${label(d.day)}: ${d.reviews} reviews, ${d.mastered} mastered`}>
               <div
@@ -79,7 +86,7 @@ export function MasteryChart({ data, streak }: { data: DayPoint[]; streak: numbe
                     ? 'bg-line'
                     : inStreak
                       ? 'bg-flame'
-                      : d.reviews >= maxReviews * 0.6
+                      : d.reviews >= scale * 0.6
                         ? 'bg-accent'
                         : 'bg-accent-soft'
                 }`}
