@@ -41,7 +41,10 @@
   --color-ok-soft: #dcfce7;
   --color-err: #b91c1c;
   --color-err-soft: #fee2e2;
-  --color-warn: #a16207;
+  /* Darker than the design's #a16207, which lands at 4.42:1 on warn-soft -
+     just under AA for the "Learning" chip and the accuracy chip. #854d0e
+     clears it at 6.2:1 and still reads as the same amber. */
+  --color-warn: #854d0e;
   --color-warn-soft: #fef3c7;
 
   /* Reward tokens */
