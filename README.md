@@ -9,6 +9,16 @@ writes, SQL-only analytics, and a seeded 120,000-event practice history.
 > URL (chosen deliberately for this round). `docker compose up --build` brings up
 > the entire product; nothing else is required on the host.
 
+## Walkthrough
+
+![One pass through the app: the home hub and streak nudge, searching and rating a word in Learn, a quiz combo, a matching board, a Word Rush run, the Progress dashboard, and the dark theme](docs/media/demo.gif)
+
+One pass over a seeded learner - 62-day streak, 860 words seen, 91 mastered.
+Home hub and streak nudge, Learn (search, reveal, self-rate), a quiz combo, a
+matching board, Word Rush, Progress, dark mode. It is a scripted browser run
+against the real stack, so every number on screen came out of Postgres.
+Crisper: [`docs/media/demo.mp4`](docs/media/demo.mp4).
+
 ## Quickstart (Docker only — no host toolchain needed)
 
 ```bash
@@ -191,6 +201,7 @@ and seeded plus empty states.
 - `packages/db` — `schema.sql`, `functions.sql`, `seed_words.sql`,
   `parse-report.json`, parser/seed/bench/explain scripts, all database tests
 - `docs/brief` — the take-home brief and the source `sat.vocab.pdf`
+- `docs/media` — the walkthrough recording embedded at the top of this file
 - `docs/plans` — the working plans this was built against (process evidence)
 - `docs/design` — the exported Claude Design canvas the UI is built to
   (gitignored: ~900 KB of generated reference HTML)

@@ -23,11 +23,14 @@ export function StreakNudge({
   onDismiss: () => void
 }) {
   const day = streak + 1
+  // The wrapper clears the bottom nav with padding, so its own box still covers
+  // the nav at z-30. Without pointer-events-none it eats every tap on the nav
+  // while the nudge is up - the card inside takes them back.
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-3.5 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md px-3.5 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
       <div
         role="status"
-        className="animate-rise-sheet rounded-2xl border-[1.5px] border-warn bg-card p-4.5 shadow-e3"
+        className="animate-rise-sheet pointer-events-auto rounded-2xl border-[1.5px] border-warn bg-card p-4.5 shadow-e3"
       >
         <div className="flex items-center gap-3">
           <span className="grid h-14 w-14 flex-none place-items-center rounded-[18px] bg-warn-soft">
