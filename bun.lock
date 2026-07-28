@@ -53,6 +53,7 @@
         "tailwindcss": "^4.1.0",
         "typescript": "^5",
         "vite": "^6.3.6",
+        "vitest": "^4.1.10",
       },
     },
     "packages/db": {

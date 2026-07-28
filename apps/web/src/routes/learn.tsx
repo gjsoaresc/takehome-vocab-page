@@ -1,54 +1,76 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { Pos, ProgressDto, WordDto, WordStatus } from '@vocab/shared'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ProgressDto, WordDto, WordStatus } from '@vocab/shared'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { EmptyState, ErrorState, LoadingState } from '../components/States'
-import { WordRow } from '../components/learn/WordRow'
+import { EmptyState, ErrorState, ListSkeleton, useMinimumDuration } from '../components/States'
+import { FilterChips, type PosFilter, type StatusFilter } from '../components/learn/FilterChips'
+import { WordRow, type RowFeedback } from '../components/learn/WordRow'
+import { XpFloat } from '../components/reward/XpFloat'
+import { Icon } from '../components/ui/Icon'
+import { ProgressRing } from '../components/ui/Progress'
+import { useToast } from '../components/ui/Toast'
 import { api } from '../lib/api'
 import { sendEvent } from '../lib/events'
+import { XP } from '../lib/rewards'
 import { useUserId } from '../lib/user-context'
 
-const POS_FILTERS: Array<{ value: Pos | 'all'; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'v', label: 'Verbs' },
-  { value: 'n', label: 'Nouns' },
-  { value: 'adj', label: 'Adjectives' },
-  { value: 'adv', label: 'Adverbs' },
-]
-
-const STATUS_FILTERS: Array<{ value: WordStatus | 'all'; label: string }> = [
-  { value: 'all', label: 'Any status' },
-  { value: 'new', label: 'New' },
-  { value: 'learning', label: 'Learning' },
-  { value: 'mastered', label: 'Mastered' },
-]
+/** The design's session rhythm: a quiet celebration at each of these. */
+const MILESTONES = [10, 25, 50]
+const RING_TARGET = 25
+/** Collapsed row height and the flex gap between rows, for offset maths. */
+const ROW_ESTIMATE = 78
+const ROW_GAP = 8
 
 function statusFromProgress(progress: ProgressDto | null): WordStatus {
   if (!progress) return 'new'
   return progress.mastered_at ? 'mastered' : 'learning'
 }
 
+/** "next review in 9 days", from the server's own SM-2 answer. */
+function intervalFrom(progress: ProgressDto | null): string {
+  if (!progress) return 'saved to your deck'
+  const ms = new Date(progress.due_at).getTime() - Date.now()
+  const days = Math.round(ms / 86_400_000)
+  if (days >= 1) return `next review in ${days} day${days === 1 ? '' : 's'}`
+  const minutes = Math.max(1, Math.round(ms / 60_000))
+  return minutes >= 60
+    ? `next review in ${Math.round(minutes / 60)}h`
+    : `next review in ${minutes}m`
+}
+
 export default function Learn() {
   const userId = useUserId()
   const queryClient = useQueryClient()
+  const toast = useToast()
   const wordsQuery = useQuery({
     queryKey: ['words', userId],
     queryFn: () => api.words(userId),
     staleTime: 5 * 60_000,
   })
+  const showSkeleton = useMinimumDuration(wordsQuery.isLoading)
 
   const [query, setQuery] = useState('')
-  const [pos, setPos] = useState<Pos | 'all'>('all')
-  const [status, setStatus] = useState<WordStatus | 'all'>('all')
+  const [pos, setPos] = useState<PosFilter>('all')
+  const [status, setStatus] = useState<StatusFilter>('all')
   const [openId, setOpenId] = useState<number | null>(null)
+  const [revealedId, setRevealedId] = useState<number | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(0)
+  const [session, setSession] = useState(0)
+  const [feedback, setFeedback] = useState<Record<number, RowFeedback>>({})
+  const [float, setFloat] = useState<{ id: number; amount: number } | null>(null)
   const pendingFocus = useRef(false)
   const revealed = useRef(new Set<number>())
   const scrollRef = useRef<HTMLDivElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const words = useMemo(() => wordsQuery.data?.words ?? [], [wordsQuery.data])
+
+  const counts = useMemo(() => {
+    const c: Record<WordStatus, number> = { new: 0, learning: 0, mastered: 0 }
+    for (const w of words) c[w.status]++
+    return c
+  }, [words])
 
   // Client-side search over the cached list: ~1k rows, well under 100ms.
   const filtered = useMemo(() => {
@@ -68,54 +90,101 @@ export default function Learn() {
   const virtualizer = useVirtualizer({
     count: filtered.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 64,
+    estimateSize: () => ROW_ESTIMATE,
     overscan: 8,
+    gap: ROW_GAP,
   })
 
-  // Deep link (?word=id from quiz results): scroll to and reveal that word.
+  // Deep link (?word=id from quiz results, Word Rush or Progress).
+  const deepLinkId = Number(searchParams.get('word')) || null
+  const deepLinkIndex = deepLinkId ? filtered.findIndex((w) => w.id === deepLinkId) : -1
+
+  // The skeleton owns the viewport for its first 400ms, so the scroll element
+  // does not exist yet; waiting for it is what makes a cold deep link land.
   useEffect(() => {
-    const target = Number(searchParams.get('word'))
-    if (!target || words.length === 0) return
-    const index = filtered.findIndex((w) => w.id === target)
-    if (index >= 0) {
-      virtualizer.scrollToIndex(index, { align: 'center' })
-      setOpenId(target)
-      setFocusedIndex(index)
-    }
-    setSearchParams({}, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [words, searchParams])
+    if (deepLinkIndex < 0 || deepLinkId === null || showSkeleton) return
+    const frame = requestAnimationFrame(() => {
+      const el = scrollRef.current
+      if (!el) return // still not mounted - keep the param and try again
+      // Set the offset on the element rather than calling scrollToIndex: that
+      // helper no-ops until the virtualizer has measured its scroll element,
+      // which on a cold load never happens in time. Unmeasured rows fall back
+      // to the estimate the offset is built from anyway.
+      const [offset] = virtualizer.getOffsetForIndex(deepLinkIndex, 'center') ?? []
+      el.scrollTop = offset ?? deepLinkIndex * (ROW_ESTIMATE + ROW_GAP)
+      setOpenId(deepLinkId)
+      setFocusedIndex(deepLinkIndex)
+      setSearchParams({}, { replace: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [deepLinkIndex, deepLinkId, showSkeleton, setSearchParams, virtualizer])
 
   function toggle(word: WordDto, index: number) {
     setFocusedIndex(index)
     const opening = openId !== word.id
     setOpenId(opening ? word.id : null)
-    if (opening && !revealed.current.has(word.id)) {
-      revealed.current.add(word.id)
-      void sendEvent({ user_id: userId, mode: 'learn', type: 'revealed', word_id: word.id })
-    }
+    if (!opening) setRevealedId(null)
   }
 
-  async function rate(word: WordDto, rating: number) {
-    setOpenId(null)
-    const result = await sendEvent({
-      user_id: userId,
-      mode: 'learn',
-      type: 'rated',
-      word_id: word.id,
-      rating,
-    })
-    // Server truth: reflect the returned progress into the cached list.
-    queryClient.setQueryData<{ words: WordDto[] }>(['words', userId], (old) =>
-      old
-        ? {
-            words: old.words.map((w) =>
-              w.id === word.id ? { ...w, status: statusFromProgress(result.progress) } : w,
-            ),
-          }
-        : old,
-    )
-  }
+  const reveal = useCallback(
+    (word: WordDto) => {
+      setRevealedId(word.id)
+      if (revealed.current.has(word.id)) return
+      revealed.current.add(word.id)
+      void sendEvent({ user_id: userId, mode: 'learn', type: 'revealed', word_id: word.id })
+    },
+    [userId],
+  )
+
+  const rate = useCallback(
+    async (word: WordDto, rating: number) => {
+      setOpenId(null)
+      setRevealedId(null)
+      setFloat({ id: word.id, amount: XP.perRating })
+      setTimeout(() => setFloat(null), 700)
+
+      const next = session + 1
+      setSession(next)
+      if (MILESTONES.includes(next)) {
+        toast({
+          title: `${next} words rated this session`,
+          body: next === 50 ? 'That is a serious sitting.' : 'Keep the run going.',
+          icon: 'star',
+          tone: 'gold',
+        })
+      }
+
+      const result = await sendEvent({
+        user_id: userId,
+        mode: 'learn',
+        type: 'rated',
+        word_id: word.id,
+        rating,
+      })
+
+      setFeedback((f) => ({
+        ...f,
+        [word.id]: { interval: intervalFrom(result.progress), queued: result.queued },
+      }))
+
+      // Server truth: reflect the returned progress into the cached list. A
+      // queued write has no server answer yet, so the row keeps its old status
+      // rather than being downgraded to "new".
+      if (result.queued) return
+      queryClient.setQueryData<{ words: WordDto[] }>(['words', userId], (old) =>
+        old
+          ? {
+              words: old.words.map((w) =>
+                w.id === word.id
+                  ? { ...w, status: statusFromProgress(result.progress), due_at: result.progress?.due_at ?? w.due_at }
+                  : w,
+              ),
+            }
+          : old,
+      )
+    },
+    [queryClient, session, toast, userId],
+  )
 
   // Keyboard focus follows focusedIndex after the re-render (an immediate
   // rAF can fire before React commits the new tabIndex).
@@ -128,6 +197,7 @@ export default function Learn() {
   }, [focusedIndex])
 
   function onKeyDown(e: React.KeyboardEvent) {
+    const openWord = openId === null ? undefined : filtered.find((w) => w.id === openId)
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       const next = Math.min(
@@ -137,84 +207,94 @@ export default function Learn() {
       pendingFocus.current = true
       setFocusedIndex(next)
       virtualizer.scrollToIndex(next)
-    } else if (openId !== null && ['1', '2', '3', '4'].includes(e.key)) {
-      const word = filtered.find((w) => w.id === openId)
+    } else if (e.key === 'Escape' && openId !== null) {
+      setOpenId(null)
+      setRevealedId(null)
+    } else if (e.key === 'Enter' && openWord && revealedId !== openWord.id) {
+      e.preventDefault()
+      reveal(openWord)
+    } else if (openWord && revealedId === openWord.id && ['1', '2', '3', '4'].includes(e.key)) {
       const rating = { 1: 1, 2: 3, 3: 4, 4: 5 }[e.key as '1' | '2' | '3' | '4']
-      if (word) void rate(word, rating)
+      void rate(openWord, rating)
     }
   }
 
-  if (wordsQuery.isLoading) return <LoadingState label="Loading all 1,000 words" />
+  function clearFilters() {
+    setQuery('')
+    setPos('all')
+    setStatus('all')
+  }
+
+  if (showSkeleton) return <ListSkeleton />
   if (wordsQuery.isError)
     return (
-      <ErrorState message="Could not load the word list." onRetry={() => wordsQuery.refetch()} />
+      <ErrorState
+        title="Couldn't load your words"
+        message="The request timed out. Your ratings are safe on this device - nothing here is lost."
+        onRetry={() => void wordsQuery.refetch()}
+      />
     )
 
   return (
-    <div className="flex h-[calc(100dvh-7.5rem)] flex-col gap-3">
-      <h1 className="sr-only">Learn</h1>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={`Search ${words.length} words`}
-        aria-label="Search words and definitions"
-        className="tap w-full rounded-xl border border-line bg-card px-4 text-base"
-      />
-      <div className="flex gap-2" role="group" aria-label="Filters">
-        <select
-          value={pos}
-          onChange={(e) => setPos(e.target.value as Pos | 'all')}
-          aria-label="Filter by part of speech"
-          className="tap rounded-lg border border-line bg-card px-2 text-sm"
-        >
-          {POS_FILTERS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as WordStatus | 'all')}
-          aria-label="Filter by status"
-          className="tap rounded-lg border border-line bg-card px-2 text-sm"
-        >
-          {STATUS_FILTERS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-        <span className="ml-auto self-center whitespace-nowrap text-xs text-muted">
-          {filtered.length} shown
+    <div className="flex h-[calc(100dvh-9.5rem)] flex-col gap-2.5">
+      <div className="flex items-center gap-2.5">
+        <h1 className="text-xl leading-7 font-bold tracking-[-0.02em] text-ink">Words</h1>
+        <span className="tabular ml-auto text-[11.5px] text-muted">
+          {filtered.length.toLocaleString('en-US')} shown
         </span>
+        <ProgressRing
+          value={Math.min(1, session / RING_TARGET)}
+          size={34}
+          stroke={4}
+          tone="accent"
+          animate={false}
+          label={`${session} rated this session`}
+        >
+          <span className="tabular text-[11px] font-bold text-ink">{session}</span>
+        </ProgressRing>
       </div>
+
+      <div className="relative">
+        <Icon
+          name="search"
+          size={16}
+          className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search ${words.length.toLocaleString('en-US')} words`}
+          aria-label="Search words and definitions"
+          className="tap w-full rounded-[14px] border border-line bg-card pr-4 pl-10 text-base text-ink placeholder:text-muted"
+        />
+      </div>
+
+      <FilterChips
+        pos={pos}
+        status={status}
+        counts={counts}
+        total={words.length}
+        onPos={setPos}
+        onStatus={setStatus}
+        onReset={clearFilters}
+      />
 
       {filtered.length === 0 ? (
         <EmptyState
-          title="No words match"
-          hint="Try a different search or clear the filters."
-          action={
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('')
-                setPos('all')
-                setStatus('all')
-              }}
-              className="tap rounded-lg bg-accent px-5 font-medium text-white"
-            >
-              Clear filters
-            </button>
+          where="learn - search"
+          icon="search"
+          title={query ? `No match for "${query}"` : 'Nothing matches those filters'}
+          hint={
+            pos !== 'all' || status !== 'all'
+              ? 'Filters are also narrowing this list, so there may be results hiding behind them.'
+              : 'Try a shorter word stem.'
           }
+          actionLabel="Clear search and filters"
+          onAction={clearFilters}
         />
       ) : (
-        <div
-          ref={scrollRef}
-          onKeyDown={onKeyDown}
-          className="flex-1 overflow-y-auto rounded-xl border border-line bg-card px-3"
-        >
+        <div ref={scrollRef} onKeyDown={onKeyDown} className="-mx-1 flex-1 overflow-y-auto px-1">
           <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((item) => {
               const word = filtered[item.index]!
@@ -226,14 +306,20 @@ export default function Learn() {
                   className="absolute inset-x-0 top-0"
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
-                  <WordRow
-                    word={word}
-                    rowIndex={item.index}
-                    open={openId === word.id}
-                    focused={focusedIndex === item.index}
-                    onToggle={() => toggle(word, item.index)}
-                    onRate={(rating) => void rate(word, rating)}
-                  />
+                  <div className="relative">
+                    <WordRow
+                      word={word}
+                      rowIndex={item.index}
+                      open={openId === word.id}
+                      revealed={revealedId === word.id}
+                      focused={focusedIndex === item.index}
+                      feedback={feedback[word.id]}
+                      onToggle={() => toggle(word, item.index)}
+                      onReveal={() => reveal(word)}
+                      onRate={(rating) => void rate(word, rating)}
+                    />
+                    {float?.id === word.id ? <XpFloat amount={float.amount} /> : null}
+                  </div>
                 </div>
               )
             })}

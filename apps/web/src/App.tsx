@@ -3,6 +3,8 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { LoadingState } from './components/States'
+import { ToastHost } from './components/ui/Toast'
+import { CelebrationProvider } from './lib/celebrate'
 import { UserProvider } from './lib/user-context'
 import { Home } from './routes/home'
 
@@ -21,18 +23,22 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <UserProvider>
-          <Layout>
-            <Suspense fallback={<LoadingState />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/learn" element={<Learn />} />
-                <Route path="/quiz" element={<Quiz />} />
-                <Route path="/matching" element={<Matching />} />
-                <Route path="/game" element={<Game />} />
-                <Route path="/stats" element={<Stats />} />
-              </Routes>
-            </Suspense>
-          </Layout>
+          <CelebrationProvider>
+            <ToastHost>
+              <Layout>
+                <Suspense fallback={<LoadingState />}>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/learn" element={<Learn />} />
+                    <Route path="/quiz" element={<Quiz />} />
+                    <Route path="/matching" element={<Matching />} />
+                    <Route path="/game" element={<Game />} />
+                    <Route path="/stats" element={<Stats />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </ToastHost>
+          </CelebrationProvider>
         </UserProvider>
       </BrowserRouter>
     </QueryClientProvider>

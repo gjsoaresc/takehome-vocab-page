@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3000",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.5",
@@ -25,6 +26,7 @@
     "@vitejs/plugin-react": "^4.3.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5",
-    "vite": "^6.3.6"
+    "vite": "^6.3.6",
+    "vitest": "^4.1.10"
   }
 }

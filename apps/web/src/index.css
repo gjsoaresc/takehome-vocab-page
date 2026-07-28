@@ -1,64 +1,387 @@
 @import 'tailwindcss';
 
-/* Design tokens. Contrast is AA-checked against --color-paper / white:
-   ink 15.2:1, muted 6.9:1, accent 5.9:1, ok 4.7:1, err 5.9:1. */
-@theme {
-  --color-paper: #faf7f2;
+/* Dark is a class on <html> (set before first paint by the boot script in
+   index.html), not a media query - so the user can override the system. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Aurea design tokens - transcribed from the design's own @theme block
+   (docs/design/SAT Vocab Visual System.dc.html, variant 1a "Foundations").
+   Token NAMES are unchanged from the previous palette; the values are re-tuned
+   for warmth and contrast, plus six reward tokens.
+
+   `static` so every variable lands on :root whether or not a Tailwind utility
+   happens to use it. The design draws its icons as inline SVG with
+   stroke="var(--color-gold)" and friends, which the class scanner cannot see -
+   without `static` those tokens resolve to nothing in light mode.
+   --------------------------------------------------------------------------- */
+@theme static {
+  --color-paper: #faf8f4;
   --color-card: #ffffff;
-  --color-ink: #1c1917;
-  --color-muted: #57534e;
-  --color-line: #e7e5e4;
-  --color-accent: #0f766e;
-  --color-accent-strong: #115e59;
-  --color-accent-soft: #ccfbf1;
+  --color-ink: #1a1815;
+  --color-muted: #5b544c;
+  --color-line: #e8e3dc;
+  /* Skeleton highlight and text-on-accent-fill. Absent from the design's
+     @theme block but both are used by the States mockup (.theme-dark). */
+  --color-shim: #f4f0ea;
+  /* Text/glyph colour for each solid fill. In light every fill is dark enough
+     for white; in dark they invert to bright tints where white would fail AA,
+     so each one carries its own readable partner. */
+  --color-on-accent: #ffffff;
+  --color-on-xp: #ffffff;
+  --color-on-flame: #ffffff;
+  --color-on-gold: #ffffff;
+  --color-on-ok: #ffffff;
+  --color-on-err: #ffffff;
+
+  --color-accent: #0d7a6e;
+  --color-accent-strong: #0a5f55;
+  --color-accent-soft: #d6f5ef;
   --color-ok: #15803d;
   --color-ok-soft: #dcfce7;
   --color-err: #b91c1c;
   --color-err-soft: #fee2e2;
+  --color-warn: #a16207;
   --color-warn-soft: #fef3c7;
+
+  /* Reward tokens */
+  --color-xp: #4f46e5;
+  --color-xp-soft: #e7e5fd;
+  --color-flame: #c2410c;
+  --color-flame-soft: #ffedd5;
+  --color-gold: #a16207;
+  --color-gold-soft: #fdf0c7;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-caption: 0.6875rem;
+  --text-caption--line-height: 0.875rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.375rem;
+  --text-md: 1.0625rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.875rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 2.625rem;
+  --text-num: 3.5rem;
+  --text-num--line-height: 3.5rem;
+
+  /* 4px base: 1=4 2=8 3=12 4=16 5=20 6=24 8=32 10=40 14=56 */
+  --spacing: 0.25rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+
+  --shadow-e1: 0 1px 2px rgb(26 24 21 / 0.06), 0 1px 1px rgb(26 24 21 / 0.04);
+  --shadow-e2: 0 2px 4px rgb(26 24 21 / 0.05), 0 8px 20px -6px rgb(26 24 21 / 0.1);
+  --shadow-e3: 0 4px 8px rgb(26 24 21 / 0.06), 0 20px 40px -12px rgb(26 24 21 / 0.18);
+
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Named motions. Durations follow the design's motion table:
+     tap 90ms / ui 160ms / enter 240ms / reward 420ms / celebrate 900ms. */
+  --animate-pop: pop 240ms var(--ease-spring);
+  --animate-pop-reward: pop 420ms var(--ease-spring);
+  --animate-pop-badge: pop 520ms var(--ease-spring);
+  --animate-rise: rise 240ms var(--ease-standard);
+  --animate-rise-sheet: rise 420ms var(--ease-standard);
+  --animate-nudge: nudge 200ms var(--ease-standard);
+  --animate-settle: settle 420ms var(--ease-spring);
+  --animate-shimmer: shimmer 1.2s linear infinite;
+  --animate-flicker: flicker 2.4s ease-in-out infinite;
+  --animate-urgent: urgent 600ms ease-in-out infinite;
+  --animate-float-up: floatUp 700ms var(--ease-standard) forwards;
+  --animate-burst: burst 900ms var(--ease-standard) forwards;
+  --animate-sheen: sheen 1.6s linear 1;
+  --animate-grow-bar: growBar 700ms var(--ease-standard);
+  --animate-ring-sweep: ringSweep 900ms var(--ease-standard);
+  --animate-pulse-target: pulseTarget 1.2s ease-in-out infinite;
+  --animate-spin-slow: spin 1.6s linear infinite;
 }
 
-html {
-  background: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+@layer base {
+  /* Dark: same token names, ratios re-checked. */
+  .dark {
+    --color-paper: #14120f;
+    --color-card: #1e1b17;
+    --color-ink: #f5f1ea;
+    --color-muted: #a8a099;
+    --color-line: #322d27;
+    --color-shim: #3b352e;
+    --color-on-accent: #06231f;
+    --color-on-xp: #1e1b4b;
+    --color-on-flame: #3a1e0a;
+    --color-on-gold: #3a2c08;
+    --color-on-ok: #123a22;
+    --color-on-err: #3b1517;
 
-/* No horizontal scrolling, ever (brief requirement). */
-html,
-body {
-  overflow-x: hidden;
-  overscroll-behavior-y: none;
+    --color-accent: #2fd6bf;
+    --color-accent-strong: #7cead9;
+    --color-accent-soft: #0e3a35;
+    --color-ok: #4ade80;
+    --color-ok-soft: #123a22;
+    --color-err: #f87171;
+    --color-err-soft: #3b1517;
+    --color-warn: #fbbf24;
+    --color-warn-soft: #3a2e10;
+
+    --color-xp: #a5b4fc;
+    --color-xp-soft: #1e1b4b;
+    --color-flame: #fb923c;
+    --color-flame-soft: #3a1e0a;
+    --color-gold: #fcd34d;
+    --color-gold-soft: #3a2c08;
+
+    --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-e2: 0 6px 18px -6px rgb(0 0 0 / 0.6);
+    --shadow-e3: 0 20px 40px -12px rgb(0 0 0 / 0.7);
+  }
+
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* No horizontal scrolling, ever (brief requirement).
+     `clip` rather than `hidden`, and on html only: `overflow-x: hidden` forces
+     `overflow-y` to compute to `auto`, which turns BOTH html and body into
+     scroll containers. Body then has nothing to scroll and swallows the wheel
+     instead of chaining to the document, so the page only scrolls when the
+     pointer is over a fixed element like the bottom nav. `clip` creates no
+     scroll container, so normal document scrolling is preserved. */
+  html {
+    overflow-x: clip;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+    outline-offset: 2px;
+  }
+
+  /* Counters must not jitter as they roll. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  button:not([disabled]),
+  [role='button']:not([disabled]) {
+    cursor: pointer;
+  }
 }
 
 /* Every interactive element meets the 44px tap target. */
-.tap {
+@utility tap {
   min-height: 44px;
   min-width: 44px;
 }
 
-@keyframes shake {
+/* Reward-only gradient: level-up sheets, badge unlocks, streak milestones.
+   Never behind body text - overlay text sits on a solid chip. */
+@utility celebrate {
+  background-image: linear-gradient(135deg, #0d7a6e 0%, #4f46e5 55%, #c2410c 100%);
+}
+
+@utility skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-line) 25%,
+    var(--color-shim) 50%,
+    var(--color-line) 75%
+  );
+  background-size: 240px 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   Shared keyframes - every named motion in the design resolves to one of these.
+   --------------------------------------------------------------------------- */
+@keyframes pop {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.13);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* The design's 5-stop shake: a wrong answer or an unmatched pair. */
+@keyframes nudge {
   0%,
   100% {
     transform: translateX(0);
   }
-  25% {
-    transform: translateX(-6px);
+  20% {
+    transform: translateX(-3px);
   }
-  75% {
-    transform: translateX(6px);
+  40% {
+    transform: translateX(3px);
   }
-}
-.animate-shake {
-  animation: shake 0.3s ease-in-out 2;
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+@keyframes settle {
+  0% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -240px 0;
+  }
+  to {
+    background-position: 240px 0;
+  }
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.06) rotate(-2deg);
+  }
+}
+
+@keyframes urgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.09);
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.9);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -46px) scale(1);
+  }
+}
+
+@keyframes burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+@keyframes sheen {
+  from {
+    background-position: -320px 0;
+  }
+  to {
+    background-position: 320px 0;
+  }
+}
+
+@keyframes growBar {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Rings publish their circumference as --ring-dasharray; the sweep runs from
+   an empty arc to whatever dashoffset the element already carries. */
+@keyframes ringSweep {
+  from {
+    stroke-dashoffset: var(--ring-dasharray);
+  }
+}
+
+@keyframes pulseTarget {
+  0%,
+  100% {
+    border-color: var(--color-accent);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The safety net. Per-component fallbacks - the ones that keep the information
+   the animation carried - live in the components via usePrefersReducedMotion;
+   this only guarantees nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

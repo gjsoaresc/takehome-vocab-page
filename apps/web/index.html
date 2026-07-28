@@ -3,8 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1c1917" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f4" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14120f" />
     <title>SAT Vocab</title>
+    <script>
+      // Runs before first paint so a dark reload never flashes light.
+      // Mirrors resolveTheme() in src/lib/theme.ts - keep the two in step.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('vocab.theme')
+          var dark =
+            stored === 'dark' ||
+            (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) document.documentElement.classList.add('dark')
+        } catch (e) {
+          /* private mode: fall through to light */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

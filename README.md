@@ -139,25 +139,60 @@ so it stays flat as history grows. `review_next` selects the due window through
 the `(user_id, due_at)` index instead of filtering the user's whole progress
 set through the primary key.
 
+## Design system and the reward layer
+
+The UI is built to the Aurea design (`docs/design/`, exported from Claude
+Design). `apps/web/src/index.css` carries that design's own Tailwind v4
+`@theme` block: warm paper/ink palette, a full **dark theme** on a `.dark`
+class (system by default, with a header toggle, applied before first paint so a
+dark reload never flashes light), a type/space/radius/elevation scale, and the
+named motions from the design's motion table — every one with a
+`prefers-reduced-motion` fallback that still conveys the state.
+
+On top of it sits a **reward layer**: XP, a 12-level curve, 13 badges, a daily
+review goal, streak flames at 3/7/30/100, and celebration sheets for a level-up
+or a badge unlock. None of it needs a new table or endpoint — `lib/rewards.ts`
+is a pure function of the `GET /api/stats` payload.
+
+The one rule that shapes it: **XP can never move backwards.** `mastery_over_time`
+is windowed to 30 days, so summing it for a lifetime total would make every
+learner's XP shrink on day 31. Lifetime XP therefore reads only the lifetime
+rollups (`modes[]`, `totals`) and is floored at a high-water mark; the design's
+per-day XP sources still appear, as *session* XP on the screen that earned them.
+
 ## Testing
 
-43 tests, all against real Postgres (no mocked I/O): parser fixtures from real
-PDF text, schema constraints, hand-computed SM-2 trajectories, HTTP-level
-idempotency, distractor quality, scheduler ordering, and a replay-equivalence
-proof (incremental `record_event` ≡ `COPY` + `rebuild_from_events`). Frontend
-flows were verified in-browser at 390×844 (reveal/rate persistence, quiz
-sessions, tap+drag matching, a full timed game run, seeded and empty stats).
+43 database and HTTP tests, all against real Postgres (no mocked I/O): parser
+fixtures from real PDF text, schema constraints, hand-computed SM-2
+trajectories, HTTP-level idempotency, distractor quality, scheduler ordering,
+and a replay-equivalence proof (incremental `record_event` ≡ `COPY` +
+`rebuild_from_events`).
+
+Plus 29 frontend unit tests (`bun run --filter @vocab/web test`) over the reward
+math — the XP curve, level thresholds and badge predicates — including the two
+regressions that matter: a 30-day roll-off must not change XP, and a lapse that
+un-masters a word must not lower the level.
+
+Frontend flows were verified in-browser at 390×844: theme switch across all six
+routes, reveal/rate with the server-returned interval, quiz sessions with combo
+and results, tap+drag matching, a full timed Word Rush run, the offline write
+queue (a rating queued while the API was failing, then replayed exactly once),
+and seeded plus empty states.
 
 ## Repo layout
 
 - `apps/api` — Hono routes (`users`, `words`, `events`, `review`, `quiz`,
   `matching`, `game`, `stats`, `healthz`)
-- `apps/web` — mobile-first React app (44px targets, AA contrast, right/wrong
-  never by color alone, designed loading/error/empty/finished states)
+- `apps/web` — mobile-first React app (44px targets, AA contrast in light and
+  dark, right/wrong never by color alone, designed loading/error/empty/offline/
+  finished states). `components/ui` is the design-system primitive set,
+  `lib/rewards.ts` the pure reward engine, `lib/outbox.ts` the offline queue.
 - `packages/shared` — zod event schema + response types
 - `packages/db` — `schema.sql`, `functions.sql`, `seed_words.sql`,
   `parse-report.json`, parser/seed/bench/explain scripts, all database tests
-- `docs/plans` — the working plan this was built against (process evidence)
+- `docs/plans` — the working plans this was built against (process evidence)
+- `docs/design` — the exported Claude Design canvas the UI is built to
+  (gitignored: ~900 KB of generated reference HTML)
 
 ## Hours spent
 

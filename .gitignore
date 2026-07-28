@@ -8,3 +8,6 @@ dist/
 coverage/
 # Local working notes, never committed
 docs/design-prompts.md
+
+# Generated design canvas pulled from Claude Design (local reference)
+docs/design/

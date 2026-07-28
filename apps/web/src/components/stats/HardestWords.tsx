@@ -1,39 +1,54 @@
 import type { StatsDto } from '@vocab/shared'
 import { Link } from 'react-router-dom'
+import { Icon } from '../ui/Icon'
 
-/** The words missed most often, by miss rate; each row jumps into Learn. */
+/**
+ * The words winning. Each row is a challenge rather than a table cell, and each
+ * one links straight into Learn at that word.
+ */
 export function HardestWords({ hardest }: { hardest: StatsDto['hardest'] }) {
   if (hardest.length === 0) {
     return (
-      <p className="px-4 py-4 text-sm text-muted">
+      <p className="text-[13px] leading-[18px] text-muted">
         Nothing yet - miss a word a few times and it shows up here.
       </p>
     )
   }
+
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="border-b border-line text-left text-xs text-muted">
-          <th className="px-4 py-2 font-semibold">Word</th>
-          <th className="px-2 py-2 text-right font-semibold">Miss rate</th>
-          <th className="px-4 py-2 text-right font-semibold">Attempts</th>
-        </tr>
-      </thead>
-      <tbody>
-        {hardest.map((w) => (
-          <tr key={w.word_id} className="border-b border-line last:border-b-0">
-            <td className="px-2 py-1">
-              <Link to={`/learn?word=${w.word_id}`} className="tap flex items-center px-2 font-semibold">
-                {w.headword}
-              </Link>
-            </td>
-            <td className="px-2 py-1 text-right tabular-nums">
-              {Math.round(w.miss_rate * 100)}%
-            </td>
-            <td className="px-4 py-1 text-right tabular-nums text-muted">{w.attempts}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <ul className="flex flex-col gap-2">
+      {hardest.map((w) => {
+        const rate = Math.round(w.miss_rate * 100)
+        return (
+          <li key={w.word_id}>
+            <Link
+              to={`/learn?word=${w.word_id}`}
+              className="flex min-h-16 items-center gap-3 rounded-[18px] border border-line bg-card px-3 py-3 shadow-e1"
+            >
+              <span className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[13px] bg-err-soft">
+                <span className="tabular text-[12.5px] font-extrabold text-err">{rate}%</span>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15.5px] leading-5 font-semibold text-ink">
+                  {w.headword}
+                </span>
+                <span className="tabular block text-xs leading-4 text-muted">
+                  {w.misses} misses in {w.attempts} attempts
+                </span>
+                <span className="mt-1.5 block h-[5px] overflow-hidden rounded-full bg-line">
+                  <span className="block h-full rounded-full bg-err" style={{ width: `${rate}%` }} />
+                </span>
+              </span>
+              <span className="flex flex-none flex-col items-end gap-0.5">
+                <span className="text-[11px] leading-none font-bold text-accent-strong">
+                  Beat it
+                </span>
+                <Icon name="chevronRight" size={16} strokeWidth={2.2} className="text-muted" />
+              </span>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
