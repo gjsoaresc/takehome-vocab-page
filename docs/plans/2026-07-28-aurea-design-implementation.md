@@ -3,7 +3,7 @@
 Created: 2026-07-28
 Author: jacob@evren.gg
 Agent: Claude Code
-Status: COMPLETE
+Status: VERIFIED
 Approved: Yes
 Iterations: 1
 Worktree: No
@@ -66,7 +66,8 @@ All three services are already up and healthy (verified: `docker compose ps`, `c
 - **Task 9 (Quiz) replaced the auto-advance timer with an explicit Continue button.** The plan said to keep the 900 ms / 1700 ms auto-advance; the Quiz mockup (variant 3a) instead locks the options and shows a feedback bar with a `Continue` / `See results` button, driven by Enter/Space. The design's version is both what was asked for and the more accessible one, so it wins.
 
 - **Scroll was broken wherever the page overflowed, reported by the user mid-build.** `overflow-x: hidden` on both `html` and `body` forces `overflow-y` to compute to `auto`, making body a scroll container with nothing to scroll: it swallowed the wheel instead of chaining to the document, so the page only moved when the pointer was over the fixed bottom nav. Now `overflow-x: clip` on `html` only, which creates no scroll container.
-- **Verification was paused at the user's request during Task 11, then resumed for the cross-cutting truths.** Progress (TS-008) and both cross-screen Goal Verification truths are now browser-verified. Still outstanding: TS-007 step 4, the Word Rush last-ten-seconds HUD escalation - the code path exists but the clock was never caught inside that ten-second window.
+- **Verification was paused at the user's request during Task 11, then resumed for the cross-cutting truths.** Progress (TS-008) and both cross-screen Goal Verification truths are browser-verified. TS-007 step 4 - the last-ten-seconds HUD escalation - was the last gap: two manual attempts missed the ten-second window entirely. It is now closed by a scripted full 90-second run, sampled at 9.2s / 7.6s / 6.1s left, in both motion modes. All three signals fire together: solid flame fill (`rgb(194,65,12)`) with `--color-on-flame` text, tenths on the clock, `animate-urgent`, and the progress bar flipping to flame. Under `prefers-reduced-motion: reduce` the fill and the tenths are identical and only the pulse is neutralised by the global 1ms guard - which is the point of carrying three signals.
+- **The streak nudge made the bottom nav untappable, found while recording the README walkthrough.** Its wrapper clears the nav with `pb-[calc(4.5rem+safe-area)]` inside its own `fixed bottom-0` box at `z-30`, so the padding sat over the nav and swallowed every tap on it - Home was unnavigable whenever a streak was at risk. `pointer-events-none` on the wrapper, `pointer-events-auto` on the card. Verified: nudge on screen, tap Learn, lands on `/learn`.
 - **The `--color-warn` value from the design fails AA in light.** #a16207 on #fef3c7 is 4.42:1, under the 4.5 needed by the "Learning" status chip and Home's accuracy chip. Lowered to #854d0e (6.2:1), same amber reading. Found by the all-routes contrast sweep, not by eye.
 - **The 30-day chart flattened under one outlier day.** Scaling bar height against the outright max meant a single heavy session (a 130-judgment Word Rush run) pushed every other day to the 3px floor and the month read as empty. Now scaled against the 90th percentile of active days, with heights clamped, so the outlier still draws full height but no longer sets the scale.
 
