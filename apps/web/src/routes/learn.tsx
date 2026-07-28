@@ -236,7 +236,7 @@ export default function Learn() {
     )
 
   return (
-    <div className="flex h-[calc(100dvh-9.5rem)] flex-col gap-2.5">
+    <div className="flex h-[calc(var(--app-h)-9.5rem)] flex-col gap-2.5">
       <div className="flex items-center gap-2.5">
         <h1 className="text-xl leading-7 font-bold tracking-[-0.02em] text-ink">Words</h1>
         <span className="tabular ml-auto text-[11.5px] text-muted">

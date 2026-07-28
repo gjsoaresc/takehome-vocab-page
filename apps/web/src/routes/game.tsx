@@ -282,7 +282,7 @@ export default function Game() {
 
   return (
     <div
-      className={`-mx-4 -mt-3 flex min-h-[calc(100dvh-7rem)] flex-col px-4 pt-3 transition-colors duration-[400ms] ${
+      className={`-mx-4 -mt-3 flex min-h-[calc(var(--app-h)-7rem)] flex-col px-4 pt-3 transition-colors duration-[400ms] ${
         urgent ? 'bg-flame-soft/40' : ''
       }`}
     >

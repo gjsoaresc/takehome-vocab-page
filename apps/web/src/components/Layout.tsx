@@ -67,7 +67,7 @@ export function Layout({ children }: { children: ReactNode }) {
   useEffect(watchConnection, [])
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
+    <div className="app-shell mx-auto flex min-h-[var(--app-h)] w-full max-w-md flex-col">
       {showTopBar ? (
         <header className="flex items-center justify-between px-4 pt-3">
           <LevelChip />
@@ -75,7 +75,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </header>
       ) : null}
 
-      <main className="flex-1 px-4 pt-3 pb-24">
+      <main className="app-main flex-1 px-4 pt-3 pb-24">
         {pending > 0 ? (
           <div className="mb-3">
             <OfflineBanner pending={pending} onRetry={() => void flush()} />

@@ -164,6 +164,14 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* The height the app treats as "the screen". On a phone that is the viewport;
+     inside the desktop device frame below it is the frame. Three places measure
+     against it - the shell, Word Rush's board, and Learn's virtualised list -
+     and all three have to agree, or the frame scrolls behind a pinned nav. */
+  :root {
+    --app-h: 100dvh;
+  }
+
   /* No horizontal scrolling, ever (brief requirement).
      `clip` rather than `hidden`, and on html only: `overflow-x: hidden` forces
      `overflow-y` to compute to `auto`, which turns BOTH html and body into
@@ -192,6 +200,61 @@
   button:not([disabled]),
   [role='button']:not([disabled]) {
     cursor: pointer;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Desktop: the design is specified at 390px and nowhere else. Stretching six
+   phone screens across a laptop would mean inventing a second breakpoint the
+   design never had, so the column becomes a device instead - centred in the
+   window, the page tinted behind it. Deliberate, rather than a narrow strip
+   stranded in empty paper.
+
+   `transform: translate(0)` is the whole trick: it makes #root the containing
+   block for every `position: fixed` descendant, so the bottom nav, the reward
+   sheets, the toasts and the quiz feedback bar pin to the device instead of the
+   window - and not one of the six screens needs to know. The frame is on #root,
+   not on the Layout div, because the toast host and the celebration provider
+   render their overlays as siblings of it.
+
+   The frame itself must NOT scroll: inside a transformed ancestor a fixed
+   element behaves like an absolute one, so if the frame were the scroller the
+   nav would scroll away with the content. `main` is the scroller.
+
+   Deliberately unlayered - it has to override the `min-h-*` utility on the
+   shell, and anything inside `@layer base` loses to Tailwind's utilities.
+   --------------------------------------------------------------------------- */
+@media (min-width: 880px) and (min-height: 720px) {
+  html {
+    background: color-mix(in srgb, var(--color-ink) 9%, var(--color-paper));
+  }
+
+  body {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+  }
+
+  #root {
+    --app-h: min(920px, calc(100dvh - 3rem));
+    width: 448px;
+    height: var(--app-h);
+    overflow: hidden;
+    transform: translate(0);
+    border: 1px solid var(--color-line);
+    border-radius: 30px;
+    background: var(--color-paper);
+    box-shadow: var(--shadow-e3);
+  }
+
+  .app-shell {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .app-main {
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 

@@ -195,8 +195,11 @@ and seeded plus empty states.
   `matching`, `game`, `stats`, `healthz`)
 - `apps/web` — mobile-first React app (44px targets, AA contrast in light and
   dark, right/wrong never by color alone, designed loading/error/empty/offline/
-  finished states). `components/ui` is the design-system primitive set,
-  `lib/rewards.ts` the pure reward engine, `lib/outbox.ts` the offline queue.
+  finished states). The design is specified at 390px only, so on a desktop
+  window the column is centred in a device frame rather than stretched across a
+  breakpoint the design never had. `components/ui` is the design-system
+  primitive set, `lib/rewards.ts` the pure reward engine, `lib/outbox.ts` the
+  offline queue.
 - `packages/shared` — zod event schema + response types
 - `packages/db` — `schema.sql`, `functions.sql`, `seed_words.sql`,
   `parse-report.json`, parser/seed/bench/explain scripts, all database tests
