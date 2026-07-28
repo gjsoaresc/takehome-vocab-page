@@ -5,6 +5,8 @@ import { Icon } from '../ui/Icon'
 /** Design's commit threshold: 92px of travel, or a flick past 0.6px/ms. */
 const COMMIT_PX = 92
 const FLICK_VELOCITY = 0.6
+/** Per-letter deal-in offset. The longest headword still lands under ~320ms. */
+const LETTER_STAGGER_MS = 18
 
 /**
  * Swipeable judgment card: right = "these match", left = "they don't".
@@ -81,12 +83,28 @@ export function RushCard({
         <p className="text-[10.5px] leading-none font-semibold tracking-[0.08em] text-muted uppercase">
           Do these match?
         </p>
+        {/* Letters deal in one at a time, filling the dead beat between cards.
+            The word itself is announced once from the sr-only copy - split into
+            per-letter spans, some screen readers would spell it out instead.
+            RushCard is keyed by card index in game.tsx, so the remount replays
+            this on every new word with no key of its own. */}
         <p
           className={`mt-2 font-bold tracking-[-0.025em] text-ink ${
             longWord ? 'text-[30px] leading-[34px]' : 'text-[38px] leading-[42px]'
           }`}
         >
-          {card.headword}
+          <span className="sr-only">{card.headword}</span>
+          <span aria-hidden>
+            {[...card.headword].map((letter, i) => (
+              <span
+                key={i}
+                className="animate-letters-in inline-block"
+                style={{ animationDelay: `${i * LETTER_STAGGER_MS}ms` }}
+              >
+                {letter === ' ' ? '\u00A0' : letter}
+              </span>
+            ))}
+          </span>
         </p>
         <div className="mt-3 rounded-lg border border-line bg-paper px-3.5 py-3 text-[15px] leading-[21px] text-ink">
           {card.definition}

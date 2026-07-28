@@ -13,12 +13,47 @@ import { CARD, SectionLabel } from '../components/ui/Card'
 import { Icon } from '../components/ui/Icon'
 import { api } from '../lib/api'
 import { useCelebrate } from '../lib/celebrate'
-import { clockTime, useNow, weekday } from '../lib/clock'
+import { clockTime, timeOfDay, useNow, weekday, type TimeOfDay } from '../lib/clock'
 import { getBestRun, getStoredGoal, getXpFloor, rememberXp } from '../lib/reward-store'
-import { WORD_COUNT, deriveRewards, formatProgress, type Badge } from '../lib/rewards'
+import {
+  WORD_COUNT,
+  deriveRewards,
+  formatProgress,
+  weekStrip,
+  type Badge,
+  type RewardState,
+  type WeekDay,
+} from '../lib/rewards'
 import { useUserId } from '../lib/user-context'
 
 const NUDGE_KEY = 'vocab.reward.nudge_day'
+
+const GREETING: Record<TimeOfDay, string> = {
+  morning: 'Fresh start',
+  afternoon: 'Quick one?',
+  night: 'Close the day',
+}
+
+/**
+ * The line under the greeting. It carries the goal state the heading used to,
+ * phrased for the hour - a morning that has not started yet reads differently
+ * from an evening with four reviews left.
+ */
+function todLine(tod: TimeOfDay, reward: RewardState, remaining: number): string {
+  const nextDay = reward.streak + 1
+  if (reward.goalMet) {
+    return tod === 'night'
+      ? `Day ${reward.streak} is locked. Anything now is a head start on tomorrow.`
+      : `Day ${reward.streak} is already locked in.`
+  }
+  if (tod === 'morning') {
+    return `${remaining} reviews puts day ${nextDay} away before the day gets going.`
+  }
+  if (tod === 'afternoon') {
+    return `You are ${remaining} from goal - Word Rush covers it in 90 seconds.`
+  }
+  return `${remaining} left to lock in day ${nextDay}.`
+}
 
 /** Mode copy is fixed; only the trailing stat comes from the payload. */
 const MODES = {
@@ -72,6 +107,57 @@ function suggestedMode(stats: StatsDto): ModeKey {
   return graded.reduce((a, b) => (pct(a) <= pct(b) ? a : b)).mode as ModeKey
 }
 
+/** There are at most three graded modes, so the table only has to reach 3. */
+const ordinal = (n: number) => `${n}${['th', 'st', 'nd', 'rd'][n] ?? 'th'}`
+
+/**
+ * What holding a mode card reveals. Strictly fields GET /api/stats returns -
+ * there is no per-mode time series, so there is no sparkline and no trend.
+ */
+function peekFor(key: ModeKey, stats: StatsDto): Mode['peek'] {
+  if (key === 'learn') {
+    const { words_seen, words_mastered } = stats.totals
+    return {
+      headline: `${words_mastered.toLocaleString('en-US')} mastered`,
+      lines: [
+        `${words_seen.toLocaleString('en-US')} of ${WORD_COUNT.toLocaleString('en-US')} words seen`,
+        `${(WORD_COUNT - words_seen).toLocaleString('en-US')} still untouched`,
+      ],
+    }
+  }
+
+  const here = stats.modes.find((m) => m.mode === key)
+  if (!here || here.attempts === 0) return undefined
+
+  const graded = stats.modes.filter((m) => m.mode !== 'learn' && m.attempts > 0)
+  const place = [...graded].sort((a, b) => pct(b) - pct(a)).findIndex((m) => m.mode === key) + 1
+
+  return {
+    headline: `${pct(here)}% accuracy`,
+    lines: [
+      `${here.correct.toLocaleString('en-US')} right of ${here.attempts.toLocaleString('en-US')} answered`,
+      graded.length > 1
+        ? `${ordinal(place)} of your ${graded.length} graded modes`
+        : 'Your only graded mode so far',
+    ],
+  }
+}
+
+/** The actual rule behind the suggestion, in the actual numbers. */
+function whySuggested(key: ModeKey, stats: StatsDto): string {
+  const here = stats.modes.find((m) => m.mode === key)
+  if (key === 'learn' || !here || here.attempts === 0) {
+    return 'No graded mode has 20 answers yet, so there is nothing to compare. Learn is where every word enters your deck, and it feeds the other three.'
+  }
+  const rivals = stats.modes
+    .filter((m) => m.mode !== 'learn' && m.mode !== key && m.attempts >= 20)
+    .sort((a, b) => pct(a) - pct(b))
+  const next = rivals[0]
+    ? ` The next weakest is ${MODES[rivals[0].mode as ModeKey].name} at ${pct(rivals[0])}%.`
+    : ''
+  return `${MODES[key].name} is your weakest graded mode at ${pct(here)}% over ${here.attempts.toLocaleString('en-US')} answers.${next} Learn sits out of the comparison because its "accuracy" is the share of self-ratings at Good or better, which is not the same measurement.`
+}
+
 function statFor(key: ModeKey, stats: StatsDto): string {
   if (key === 'learn') {
     const left = WORD_COUNT - stats.totals.words_seen
@@ -120,6 +206,64 @@ function BadgeRow({ badges, nextBadge }: { badges: Badge[]; nextBadge: Badge | n
         </p>
       ) : null}
     </section>
+  )
+}
+
+const WEEKDAY = (isoDay: string) =>
+  new Date(`${isoDay}T00:00:00Z`).toLocaleDateString('en-US', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  })
+
+/** What each dot state means, spoken. Never carried by colour alone. */
+const DAY_STATE_LABEL: Record<WeekDay['state'], string> = {
+  met: 'goal met',
+  partial: 'some reviews, goal missed',
+  open: 'nothing yet',
+}
+
+/**
+ * The last seven days, unfolded from under the ring. Six filled dots and one
+ * still open tomorrow pulls harder than any counter does.
+ *
+ * State is legible without colour: a met day carries the flame glyph, a partial
+ * day a dashed ring, an open day a plain empty one.
+ */
+function WeekStrip({ open, days }: { open: boolean; days: WeekDay[] }) {
+  return (
+    <div
+      className="overflow-hidden transition-[max-height] duration-[260ms] ease-standard"
+      style={{ maxHeight: open ? 84 : 0 }}
+      aria-hidden={!open}
+    >
+      <ul className="flex justify-between px-1.5 pt-3.5">
+        {days.map((d, i) => (
+          <li key={d.day} className="flex flex-col items-center gap-1.5">
+            <span
+              className={`grid h-[26px] w-[26px] place-items-center rounded-full border-[1.5px] ${
+                d.state === 'met'
+                  ? 'border-flame bg-flame-soft text-flame'
+                  : d.state === 'partial'
+                    ? 'border-flame border-dashed bg-card text-transparent'
+                    : 'border-line bg-card text-transparent'
+              }`}
+              // Only the entrance staggers; the dots are static once dealt.
+              style={
+                open
+                  ? { animation: 'var(--animate-dot-in)', animationDelay: `${i * 40}ms` }
+                  : undefined
+              }
+            >
+              {d.state === 'met' ? <Icon name="flame" size={12} filled /> : null}
+            </span>
+            <span className="text-[9.5px] leading-none font-semibold text-muted">
+              {WEEKDAY(d.day)}
+            </span>
+            <span className="sr-only">{`${d.reviews} reviews, ${DAY_STATE_LABEL[d.state]}`}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -191,6 +335,7 @@ export function Home() {
   const statsQuery = useQuery({ queryKey: ['stats', userId], queryFn: () => api.stats(userId) })
   const showSkeleton = useMinimumDuration(statsQuery.isLoading)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const [weekOpen, setWeekOpen] = useState(false)
 
   const stats = statsQuery.data
   const reward = useMemo(
@@ -231,7 +376,9 @@ export function Home() {
   const rest = (Object.keys(MODES) as ModeKey[]).filter((k) => k !== suggested)
   const suggestedStat = stats.modes.find((m) => m.mode === suggested)
   const remaining = Math.max(0, reward.goal - reward.reviewsToday)
-  const toMode = (key: ModeKey): Mode => ({ ...MODES[key], stat: statFor(key, stats) }) as Mode
+  const tod = timeOfDay(now)
+  const toMode = (key: ModeKey): Mode =>
+    ({ ...MODES[key], stat: statFor(key, stats), peek: peekFor(key, stats) }) as Mode
 
   // At most once a day, never after 9pm, and only when a live run is at risk.
   const today = now.toISOString().slice(0, 10)
@@ -243,17 +390,19 @@ export function Home() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <p className="text-xs leading-4 text-muted">
+      <header
+        className="rounded-2xl px-4 py-3.5 transition-[background-image,color] duration-500"
+        style={{ backgroundImage: `var(--tod-${tod}-bg)`, color: `var(--tod-${tod}-fg)` }}
+      >
+        <p className="text-xs leading-4" style={{ color: `var(--tod-${tod}-sub)` }}>
           {weekday(now)} - {clockTime(now)}
         </p>
-        <h1 className="text-xl leading-[30px] font-bold tracking-[-0.02em] text-ink">
-          {reward.goalMet
-            ? 'Goal met today'
-            : reward.reviewsToday > 0
-              ? 'Keep it going'
-              : 'Welcome back'}
-        </h1>
+        {/* One greeting, not two: the hour picks the words, and the goal state
+            it used to carry moves down to the line beneath. */}
+        <h1 className="text-xl leading-[30px] font-bold tracking-[-0.02em]">{GREETING[tod]}</h1>
+        <p className="mt-1 text-[12.5px] leading-[17px]" style={{ color: `var(--tod-${tod}-sub)` }}>
+          {todLine(tod, reward, remaining)}
+        </p>
       </header>
 
       <section
@@ -266,16 +415,26 @@ export function Home() {
           streak={reward.streak}
           flame={reward.flame}
         />
-        <div className="mt-3.5 text-center">
-          <p className="text-[17px] leading-6 font-semibold text-ink">
+        <div className="mt-3.5 w-full text-center">
+          {/* The count line is the week toggle - not the ring, which already
+              holds the flame's poke target, and not the whole block, because a
+              <button> takes phrasing content and would otherwise read out the
+              streak sentence as part of its own name. */}
+          <button
+            type="button"
+            onClick={() => setWeekOpen((open) => !open)}
+            aria-expanded={weekOpen}
+            className="text-[17px] leading-6 font-semibold text-ink"
+          >
             <span className="tabular text-accent">{reward.reviewsToday}</span>
             {reward.goalMet ? ' reviews today' : ` of ${reward.goal} reviews today`}
-          </p>
+          </button>
           <p className="text-[13px] leading-[18px] text-muted">
             {reward.goalMet
               ? `Day ${reward.streak} is locked in`
               : `${remaining} more locks in day ${reward.streak + 1}`}
           </p>
+          <WeekStrip open={weekOpen} days={weekStrip(stats, reward.goal)} />
         </div>
         <div className="mt-3.5 flex w-full gap-2">
           <Link to="/learn" className={buttonClass('primary', 'flex-1')}>
@@ -297,6 +456,11 @@ export function Home() {
       <SuggestedModeCard
         mode={{
           ...toMode(suggested),
+          // The suggested card explains itself instead of peeking: its accuracy
+          // chip and note are already on the face, so a peek would unfold what
+          // is visible - and two overlays on one card would collide.
+          peek: undefined,
+          why: whySuggested(suggested, stats),
           detail: suggestedStat
             ? {
                 chip: `${pct(suggestedStat)}% accuracy`,

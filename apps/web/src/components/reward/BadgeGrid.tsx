@@ -1,7 +1,16 @@
+import { useState } from 'react'
+import { usePrefersReducedMotion } from '../../lib/motion'
 import { formatProgress, type Badge } from '../../lib/rewards'
 import { Icon } from '../ui/Icon'
 import { ProgressBar } from '../ui/Progress'
 import { BADGE_ICON } from './BadgeSheet'
+
+/** The polish sweep, matching the design's 180px-wide highlight. */
+const SHEEN = {
+  backgroundImage:
+    'linear-gradient(105deg, var(--color-gold-soft) 30%, #fffbe8 48%, var(--color-gold-soft) 60%)',
+  backgroundSize: '180px 100%',
+}
 
 /**
  * The full badge case. Earned badges get a family tint, a solid border and a
@@ -12,6 +21,12 @@ import { BADGE_ICON } from './BadgeSheet'
 export function BadgeGrid({ badges }: { badges: Badge[] }) {
   const earned = badges.filter((b) => b.earned)
   const locked = badges.filter((b) => !b.earned)
+
+  // One id, not a set: two badges held at once resolves to the last pressed,
+  // which is fine for a flourish and saves a map nobody would read.
+  const [held, setHeld] = useState<string | null>(null)
+  const release = () => setHeld(null)
+  const reduced = usePrefersReducedMotion()
 
   return (
     <section aria-label="Badges">
@@ -28,8 +43,24 @@ export function BadgeGrid({ badges }: { badges: Badge[] }) {
         <div className="mt-3.5 grid grid-cols-4 gap-2.5">
           {earned.map((b) => (
             <div key={b.id} className="flex flex-col items-center gap-1.5">
+              {/* Still a span, deliberately: polishing does nothing, and turning
+                  every earned badge into a button would add a row of tab stops
+                  that announce an action and then perform none. No touch-action
+                  override either - pointercancel is what releases it when a
+                  drag turns into a page scroll. */}
               <span
-                className="grid aspect-square w-full place-items-center rounded-[18px] border border-gold/30 bg-gold-soft text-gold"
+                onPointerDown={() => setHeld(b.id)}
+                onPointerUp={release}
+                onPointerLeave={release}
+                onPointerCancel={release}
+                className={`grid aspect-square w-full place-items-center rounded-[18px] border border-gold/30 bg-gold-soft text-gold transition-transform duration-200 ease-spring ${
+                  held === b.id
+                    ? reduced
+                      ? 'brightness-110'
+                      : 'animate-sheen-hold scale-[1.06]'
+                    : ''
+                }`}
+                style={held === b.id && !reduced ? SHEEN : undefined}
                 title={b.condition}
               >
                 <Icon name={BADGE_ICON[b.id] ?? 'star'} size={26} />

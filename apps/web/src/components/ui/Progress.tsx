@@ -29,6 +29,8 @@ interface BarProps {
   height?: number
   className?: string
   label?: string
+  /** Stagger a group of bars growing in together. Zeroed under reduced motion. */
+  delayMs?: number
 }
 
 /** Progress bar: h10 track on --line, fill transitions over 420ms. */
@@ -38,6 +40,7 @@ export function ProgressBar({
   height = 10,
   className = '',
   label,
+  delayMs,
 }: BarProps) {
   const pct = Math.max(0, Math.min(1, value)) * 100
   return (
@@ -52,7 +55,7 @@ export function ProgressBar({
     >
       <div
         className={`h-full rounded-full transition-[width] duration-[420ms] ease-standard ${FILL[tone]}`}
-        style={{ width: `${pct}%` }}
+        style={{ width: `${pct}%`, transitionDelay: delayMs ? `${delayMs}ms` : undefined }}
       />
     </div>
   )

@@ -1,7 +1,12 @@
 import type { WordDto, WordStatus } from '@vocab/shared'
+import { useState } from 'react'
+import { usePrefersReducedMotion } from '../../lib/motion'
 import { SyncChip } from '../States'
 import { Icon, type IconName } from '../ui/Icon'
 import { RatingBar } from './RatingBar'
+
+/** Maximum lean, in degrees, at the far edge of the cover. */
+const TILT = 7
 
 /** Status is icon + label + colour. Never colour alone. */
 const STATUS: Record<WordStatus, { label: string; icon: IconName; className: string }> = {
@@ -59,6 +64,13 @@ export function WordRow({
   const badge = STATUS[word.status]
   const parts = [...new Set(word.senses.map((s) => POS_LABEL[s.pos] ?? s.pos))].join(', ')
 
+  // A pointer-following 3D transform is exactly what someone turns motion off
+  // to avoid, and the global 1ms override would only make it snap rather than
+  // stop - so this one needs the hook, not the stylesheet.
+  const reduced = usePrefersReducedMotion()
+  const [lean, setLean] = useState({ x: 0, y: 0 })
+  const restLean = () => setLean({ x: 0, y: 0 })
+
   return (
     <div
       className={`overflow-hidden rounded-[18px] border bg-card transition-[border-color] duration-[160ms] ${
@@ -80,7 +92,9 @@ export function WordRow({
             </span>
             <span className="shrink-0 text-[11px] text-muted italic">{parts}</span>
           </span>
-          <span className="block text-[11.5px] leading-4 text-muted">{dueText(word, feedback)}</span>
+          <span className="block text-[11.5px] leading-4 text-muted">
+            {dueText(word, feedback)}
+          </span>
         </span>
         {feedback?.queued ? (
           <SyncChip state="queued" />
@@ -119,17 +133,35 @@ export function WordRow({
               ))}
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onReveal()
-              }}
-              className="tap flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-line bg-paper text-sm font-semibold text-accent-strong transition-transform duration-[90ms] active:scale-[0.985]"
-            >
-              <Icon name="book" size={16} />
-              Reveal meaning
-            </button>
+            // Only the open row's cover leans, and it exists only while the row
+            // is open - so no collapsed row can move, and the list stays paper.
+            <div style={{ perspective: 600 }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onReveal()
+                }}
+                onPointerMove={(e) => {
+                  if (reduced) return
+                  const box = e.currentTarget.getBoundingClientRect()
+                  setLean({
+                    x: ((e.clientX - box.left) / box.width - 0.5) * TILT * 2,
+                    y: -((e.clientY - box.top) / box.height - 0.5) * TILT * 2,
+                  })
+                }}
+                // No touch-action override: this sits inside the virtualiser's
+                // scroller, and pointercancel is what a drag-turned-scroll fires.
+                onPointerLeave={restLean}
+                onPointerUp={restLean}
+                onPointerCancel={restLean}
+                style={{ transform: `rotateX(${lean.y}deg) rotateY(${lean.x}deg)` }}
+                className="tap flex w-full items-center justify-center gap-2 rounded-[14px] border border-dashed border-line bg-paper text-sm font-semibold text-accent-strong transition-transform duration-[160ms] ease-standard"
+              >
+                <Icon name="book" size={16} />
+                Reveal meaning
+              </button>
+            </div>
           )}
           <RatingBar onRate={onRate} disabled={!revealed} />
         </div>

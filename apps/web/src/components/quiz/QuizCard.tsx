@@ -8,7 +8,15 @@ export interface Answered {
 }
 
 /** Ten segments: green for right, red for wrong, accent for the live one. */
-function Segments({ answers, index, total }: { answers: Answered[]; index: number; total: number }) {
+function Segments({
+  answers,
+  index,
+  total,
+}: {
+  answers: Answered[]
+  index: number
+  total: number
+}) {
   return (
     <div className="flex gap-[3px]">
       {Array.from({ length: total }, (_, i) => {
@@ -24,6 +32,20 @@ function Segments({ answers, index, total }: { answers: Answered[]; index: numbe
       })}
     </div>
   )
+}
+
+/**
+ * The combo made ambient. The glow thickens at 2/4/6 so a run has a felt
+ * presence beyond the counter, and breaking it costs something visible.
+ *
+ * Static values, transitioned - never a pulse: 9h bans ambient motion while a
+ * question is being read.
+ */
+function heatShadow(combo: number): string {
+  if (combo >= 6) return '0 0 0 2px var(--color-flame), 0 0 34px rgb(194 65 12 / 0.4)'
+  if (combo >= 4) return '0 0 0 2px var(--color-flame), 0 0 22px rgb(194 65 12 / 0.28)'
+  if (combo >= 2) return '0 0 0 1.5px var(--color-flame), 0 0 12px rgb(194 65 12 / 0.18)'
+  return 'var(--shadow-e1)'
 }
 
 interface QuizCardProps {
@@ -54,6 +76,8 @@ export function QuizCard({
   onQuit,
 }: QuizCardProps) {
   const locked = chosen !== null
+  // A wrong answer is what snuffs the run, so it is what shakes.
+  const broke = locked && chosen !== question.answer
   const w2d = question.direction === 'w2d'
   const correctCount = answers.filter((a) => a.chosen === a.question.answer).length
 
@@ -84,7 +108,14 @@ export function QuizCard({
         ) : null}
       </div>
 
-      <div className="flex min-h-[150px] flex-col justify-center rounded-xl border border-line bg-card p-4 shadow-e1">
+      {/* The card carries the wrong-answer shake, not the option below it:
+          9h allows one shake, never two at once. */}
+      <div
+        className={`flex min-h-[150px] flex-col justify-center rounded-xl border-[1.5px] bg-card p-4 transition-[box-shadow,border-color] duration-[400ms] ease-standard ${
+          combo >= 2 ? 'border-flame' : 'border-line'
+        } ${broke ? 'animate-nudge' : ''}`}
+        style={{ boxShadow: heatShadow(combo) }}
+      >
         <p className="text-[11px] leading-none font-semibold tracking-[0.08em] text-muted uppercase">
           {w2d ? 'What does this mean?' : 'Which word means this?'}
         </p>
@@ -119,7 +150,7 @@ export function QuizCard({
             tagTone = 'text-ok'
             mark = 'check'
           } else if (locked && isChosen) {
-            box = 'animate-nudge border-err bg-err-soft'
+            box = 'border-err bg-err-soft'
             badge = 'bg-err text-on-err'
             tag = 'Your pick'
             tagTone = 'text-err'

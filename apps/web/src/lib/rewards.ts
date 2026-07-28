@@ -87,9 +87,7 @@ export function lifetimeXp(stats: StatsDto): number {
   const rated = modeStat(stats, 'learn')?.attempts ?? 0
   const correct = stats.modes.reduce((sum, m) => sum + m.correct, 0)
   return (
-    rated * XP.perRating +
-    correct * XP.perCorrect +
-    stats.totals.words_mastered * XP.perMastered
+    rated * XP.perRating + correct * XP.perCorrect + stats.totals.words_mastered * XP.perMastered
   )
 }
 
@@ -115,9 +113,7 @@ export interface SessionXpParts {
  */
 export function sessionXp(parts: SessionXpParts): number {
   const streakBonus =
-    parts.streakDay && parts.streakDay > 0 && parts.streakDay % 7 === 0
-      ? XP.seventhStreakDay
-      : 0
+    parts.streakDay && parts.streakDay > 0 && parts.streakDay % 7 === 0 ? XP.seventhStreakDay : 0
   return (
     (parts.rated ?? 0) * XP.perRating +
     (parts.correct ?? 0) * XP.perCorrect +
@@ -248,9 +244,7 @@ function meetsPrecision(
   minAccuracy: number,
   minAttempts: number,
 ): boolean {
-  return candidates.some(
-    (m) => m.attempts >= minAttempts && m.correct / m.attempts >= minAccuracy,
-  )
+  return candidates.some((m) => m.attempts >= minAttempts && m.correct / m.attempts >= minAccuracy)
 }
 
 /**
@@ -336,6 +330,83 @@ export function ringDash(pct: number, radius: number): { dasharray: number; dash
   const dasharray = 2 * Math.PI * radius
   const clamped = Math.max(0, Math.min(1, pct))
   return { dasharray, dashoffset: dasharray * (1 - clamped) }
+}
+
+export type WeekDayState = 'met' | 'partial' | 'open'
+
+export interface WeekDay {
+  /** UTC day key, matching the API's own `day` field. */
+  day: string
+  reviews: number
+  state: WeekDayState
+}
+
+/**
+ * The last seven days as they appear under the goal ring, oldest first.
+ *
+ * `partial` stands in for the design's "grace kept" day. Per-day grace is not
+ * derivable - hasGraceDay() answers a whole-streak question, not a per-day one -
+ * so reconstructing it would mean inventing it. "You showed up but fell short"
+ * is both honest and the same shape of information.
+ */
+export function weekStrip(stats: StatsDto, goal: number): WeekDay[] {
+  const reviewsByDay = new Map(stats.mastery_over_time.map((d) => [d.day, d.reviews]))
+  const now = new Date()
+  const week: WeekDay[] = []
+
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+    const day = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
+    )
+      .toISOString()
+      .slice(0, 10)
+    const reviews = reviewsByDay.get(day) ?? 0
+    week.push({
+      day,
+      reviews,
+      // `reviews === 0` is checked first: with a goal of 0, `reviews >= goal`
+      // would otherwise mark every untouched day as met.
+      state: reviews === 0 ? 'open' : goal > 0 && reviews >= goal ? 'met' : 'partial',
+    })
+  }
+
+  return week
+}
+
+export interface RingTick {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+/**
+ * The daily goal ring as discrete ticks rather than one arc - one tick per
+ * review the goal asks for, from twelve o'clock clockwise.
+ *
+ * The count is the learner's own goal (8-20, per GOAL_FLOOR/GOAL_CEIL), never
+ * a fixed twelve. A goal of zero yields no ticks: the loop simply does not run,
+ * so `i / count` is never evaluated.
+ */
+export function ringTicks(
+  count: number,
+  innerR: number,
+  outerR: number,
+  centre: number,
+): RingTick[] {
+  const ticks: RingTick[] = []
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+    ticks.push({
+      x1: centre + cos * innerR,
+      y1: centre + sin * innerR,
+      x2: centre + cos * outerR,
+      y2: centre + sin * outerR,
+    })
+  }
+  return ticks
 }
 
 export interface DeriveOptions {

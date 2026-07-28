@@ -12,6 +12,7 @@ const KEYS = {
   goal: 'vocab.reward.goal',
   seenBadges: 'vocab.reward.seen_badges',
   bestRun: 'vocab.rush_best',
+  goalRippleDay: 'vocab.reward.goal_ripple_day',
 } as const
 
 function readNumber(key: string): number | undefined {
@@ -65,3 +66,20 @@ export function markBadgesSeen(ids: string[]): void {
 
 /** True the first time this device computes badges - the seeding pass. */
 export const hasSeenBadgesBefore = () => localStorage.getItem(KEYS.seenBadges) !== null
+
+/**
+ * Whether the goal-met ripple has already played on `day` (a UTC date key).
+ *
+ * A day stamp rather than a transition Home could watch: the review that meets
+ * the goal is rated in Learn, answered in Quiz or judged in Word Rush, and Home
+ * is only ever where the result is *seen*. Latching to a `done < goal -> done >=
+ * goal` change while Home is mounted would mean the ripple almost never fires,
+ * because Home is not on screen at the moment the count crosses.
+ *
+ * Read and write are split so the decision can be made from a pure read during
+ * render - the same shape as Home's once-a-day streak nudge - and the write can
+ * happen in an effect.
+ */
+export const goalRippleClaimed = (day: string) => localStorage.getItem(KEYS.goalRippleDay) === day
+
+export const markGoalRipple = (day: string) => localStorage.setItem(KEYS.goalRippleDay, day)

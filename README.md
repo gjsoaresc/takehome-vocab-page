@@ -75,7 +75,7 @@ double-taps count exactly once (proved over HTTP in the API tests).
   replaying 120k events)
 - quality < 3: repetitions and interval reset, the word comes back in 10 minutes
 - **mastered** when the interval reaches 21 days (Anki's "mature" convention);
-  a later lapse un-masters and decrements the mastery rollup on the *original*
+  a later lapse un-masters and decrements the mastery rollup on the _original_
   mastery day so the chart stays consistent
 
 Quality mapping lives in one SQL function: Learn's Again/Hard/Good/Easy →
@@ -89,7 +89,7 @@ A word and a candidate definition appear together; swipe right if they match,
 left if they don't (thumb-sized buttons mirror the gesture). 90 seconds, 10
 points per hit times a streak multiplier (×1–×4, reset on a miss). Decoy
 definitions share the word's part of speech, so the only winning strategy is
-actually reading the definition — fast binary *recognition* practice that
+actually reading the definition — fast binary _recognition_ practice that
 complements Quiz's slower 4-option recall. Every judgment is a graded event
 that feeds the same SM-2 pipeline. Rejected ideas: falling-word arcade (weak on
 small screens, high build cost) and a boss-battle quiz (mechanically just Quiz
@@ -113,7 +113,7 @@ folds curly quotes/dashes, ligatures, NBSP, and page furniture.
     `renunciation (n.)` ("to reject" — verb-shaped), `prescient (adj.)` ("to
     have foreknowledge" — verb-shaped), `archetypal (adj.)` and `palette (adj.)`
     (noun-shaped definitions).
-  - Alphabetical-order anomaly: `covert` is printed *after* `covet` (start of
+  - Alphabetical-order anomaly: `covert` is printed _after_ `covet` (start of
     the "D" page in the source).
   - `façade` (non-ASCII headword) and words split mid-line (`har`/`dy`) parse
     correctly after normalization.
@@ -127,21 +127,21 @@ events / 300 users loaded.
 against the app, 200 requests per endpoint across random seeded users after
 warm-up):
 
-| Endpoint | p50 | p95 | p99 |
-|---|---|---|---|
-| `GET /api/stats` | 1.5 ms | **3.6 ms** | 5.8 ms |
+| Endpoint               | p50    | p95        | p99    |
+| ---------------------- | ------ | ---------- | ------ |
+| `GET /api/stats`       | 1.5 ms | **3.6 ms** | 5.8 ms |
 | `GET /api/review/next` | 1.6 ms | **3.1 ms** | 6.0 ms |
 
 **EXPLAIN ANALYZE, before vs after** (full outputs in `packages/db/explain/`,
 regenerate with `bun run --filter @vocab/db explain`; measured for the
 heaviest seeded user):
 
-| Query | Before | After |
-|---|---|---|
-| stats: aggregate raw `events` per day | 3.30 ms, 1,469 buffers | — |
-| stats: read `user_daily_stats` rollup | — | **0.86 ms, 386 buffers** |
-| review_next due scan without `progress(user_id, due_at)` | 2.33 ms, 1,661 buffers | — |
-| review_next due scan with the index | — | **1.30 ms, 1,468 buffers** |
+| Query                                                    | Before                 | After                      |
+| -------------------------------------------------------- | ---------------------- | -------------------------- |
+| stats: aggregate raw `events` per day                    | 3.30 ms, 1,469 buffers | —                          |
+| stats: read `user_daily_stats` rollup                    | —                      | **0.86 ms, 386 buffers**   |
+| review_next due scan without `progress(user_id, due_at)` | 2.33 ms, 1,661 buffers | —                          |
+| review_next due scan with the index                      | —                      | **1.30 ms, 1,468 buffers** |
 
 What changed and why: stats moved from scanning every event a user ever
 produced (grows linearly with history) to small rollup tables maintained
@@ -160,6 +160,23 @@ dark reload never flashes light), a type/space/radius/elevation scale, and the
 named motions from the design's motion table — every one with a
 `prefers-reduced-motion` fallback that still conveys the state.
 
+On top of those utility timings sits a **delight layer**: twelve interactive
+surfaces from the design's own delight map, concentrated rather than sprayed
+about. The daily goal ring is one tick per review with a gold ripple when it
+closes; the streak flame can be poked; the count beneath it unfolds the week;
+the XP bar grows a node when a level is one session away; the header shifts
+palette with the hour; mode cards peek on hold and the suggested one flips to
+show its reasoning; the quiz card warms with the answer combo; Learn's reveal
+cover leans toward the pointer; Word Rush deals headwords a letter at a time;
+Progress bars grow as they scroll in; and earned badges take a polish.
+
+The same contract holds for all twelve — with `prefers-reduced-motion` set,
+every one still says what it said before: the ring keeps its ticks, the flame
+still warms when poked, the combo keeps its border and counter, the badge
+brightens instead of sweeping, and nothing is left stuck at zero. The design's
+quiet zones are honoured too: no motion in the bottom nav, in list scrolling,
+in the search field, or anywhere on screen while a question is being read.
+
 On top of it sits a **reward layer**: XP, a 12-level curve, 13 badges, a daily
 review goal, streak flames at 3/7/30/100, and celebration sheets for a level-up
 or a badge unlock. None of it needs a new table or endpoint — `lib/rewards.ts`
@@ -169,7 +186,7 @@ The one rule that shapes it: **XP can never move backwards.** `mastery_over_time
 is windowed to 30 days, so summing it for a lifetime total would make every
 learner's XP shrink on day 31. Lifetime XP therefore reads only the lifetime
 rollups (`modes[]`, `totals`) and is floored at a high-water mark; the design's
-per-day XP sources still appear, as *session* XP on the screen that earned them.
+per-day XP sources still appear, as _session_ XP on the screen that earned them.
 
 ## Testing
 

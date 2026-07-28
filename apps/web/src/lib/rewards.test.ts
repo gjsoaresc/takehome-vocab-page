@@ -11,7 +11,9 @@ import {
   levelFor,
   lifetimeXp,
   ringDash,
+  ringTicks,
   sessionXp,
+  weekStrip,
 } from './rewards'
 
 /** A StatsDto with everything at zero, so each test states only what it needs. */
@@ -199,13 +201,15 @@ describe('badges', () => {
   })
 
   it('flips breadth badges exactly at their threshold', () => {
-    expect(ids(stats({ totals: { words_seen: 0, words_mastered: 0 } }))).not.toContain('first-light')
+    expect(ids(stats({ totals: { words_seen: 0, words_mastered: 0 } }))).not.toContain(
+      'first-light',
+    )
     expect(ids(stats({ totals: { words_seen: 1, words_mastered: 0 } }))).toContain('first-light')
     expect(ids(stats({ totals: { words_seen: 249, words_mastered: 0 } }))).not.toContain('wide-net')
     expect(ids(stats({ totals: { words_seen: 250, words_mastered: 0 } }))).toContain('wide-net')
-    expect(
-      ids(stats({ totals: { words_seen: WORD_COUNT, words_mastered: 0 } })),
-    ).toContain('full-sweep')
+    expect(ids(stats({ totals: { words_seen: WORD_COUNT, words_mastered: 0 } }))).toContain(
+      'full-sweep',
+    )
   })
 
   it('flips depth badges exactly at their threshold', () => {
@@ -279,5 +283,96 @@ describe('ringDash', () => {
   it('clamps out-of-range input instead of drawing past the circle', () => {
     expect(ringDash(1.5, 41).dashoffset).toBe(0)
     expect(ringDash(-1, 41).dashoffset).toBeCloseTo(ringDash(0, 41).dasharray, 5)
+  })
+})
+
+describe('ringTicks', () => {
+  const C = 92
+  const INNER = 74
+  const OUTER = 86
+  const from = (x: number, y: number) => Math.hypot(x - C, y - C)
+
+  it('draws one tick per unit of the goal, across the whole 8-20 goal range', () => {
+    // GOAL_FLOOR..GOAL_CEIL - the ring never has to render outside this.
+    for (const count of [8, 10, 12, 20]) {
+      expect(ringTicks(count, INNER, OUTER, C)).toHaveLength(count)
+    }
+  })
+
+  it('starts at twelve o clock', () => {
+    const [first] = ringTicks(12, INNER, OUTER, C)
+    expect(first!.x1).toBeCloseTo(C, 5)
+    expect(first!.y1).toBeCloseTo(C - INNER, 5)
+    expect(first!.x2).toBeCloseTo(C, 5)
+    expect(first!.y2).toBeCloseTo(C - OUTER, 5)
+  })
+
+  it('runs clockwise, so the second tick is to the right of the first', () => {
+    const [, second] = ringTicks(12, INNER, OUTER, C)
+    expect(second!.x1).toBeGreaterThan(C)
+  })
+
+  it('puts every endpoint on its own radius', () => {
+    for (const t of ringTicks(20, INNER, OUTER, C)) {
+      expect(from(t.x1, t.y1)).toBeCloseTo(INNER, 5)
+      expect(from(t.x2, t.y2)).toBeCloseTo(OUTER, 5)
+    }
+  })
+
+  it('spaces ticks evenly around the full circle', () => {
+    const count = 8
+    const ticks = ringTicks(count, INNER, OUTER, C)
+    const angle = (t: { x1: number; y1: number }) => Math.atan2(t.y1 - C, t.x1 - C)
+    for (let i = 1; i < count; i++) {
+      const step = angle(ticks[i]!) - angle(ticks[i - 1]!)
+      // atan2 wraps once per revolution; compare the wrapped gap.
+      const wrapped = (step + Math.PI * 2) % (Math.PI * 2)
+      expect(wrapped).toBeCloseTo((Math.PI * 2) / count, 5)
+    }
+  })
+
+  it('returns nothing for a goal of zero rather than dividing by it', () => {
+    expect(ringTicks(0, INNER, OUTER, C)).toEqual([])
+  })
+})
+
+describe('weekStrip', () => {
+  const stateOn = (strip: ReturnType<typeof weekStrip>, daysAgo: number) =>
+    strip.find((d) => d.day === dayKey(daysAgo))!.state
+
+  it('returns seven days, oldest first, ending today', () => {
+    const strip = weekStrip(stats(), 10)
+    expect(strip).toHaveLength(7)
+    expect(strip[0]!.day).toBe(dayKey(6))
+    expect(strip[6]!.day).toBe(dayKey(0))
+  })
+
+  it('sorts each day into met, partial or open against the goal', () => {
+    const strip = weekStrip(stats({ mastery_over_time: [day(0, 12), day(1, 4), day(2, 0)] }), 10)
+    expect(stateOn(strip, 0)).toBe('met')
+    expect(stateOn(strip, 1)).toBe('partial')
+    expect(stateOn(strip, 2)).toBe('open')
+  })
+
+  it('counts exactly hitting the goal as met', () => {
+    expect(stateOn(weekStrip(stats({ mastery_over_time: [day(3, 10)] }), 10), 3)).toBe('met')
+  })
+
+  it('fills days the payload never mentions as open with no reviews', () => {
+    const strip = weekStrip(stats({ mastery_over_time: [day(0, 5)] }), 10)
+    const missing = strip.find((d) => d.day === dayKey(4))!
+    expect(missing.reviews).toBe(0)
+    expect(missing.state).toBe('open')
+  })
+
+  it('ignores days outside the last seven', () => {
+    const strip = weekStrip(stats({ mastery_over_time: [day(9, 30)] }), 10)
+    expect(strip.every((d) => d.reviews === 0)).toBe(true)
+  })
+
+  it('reads an empty day as open even when the goal is zero', () => {
+    // 0 >= 0 would otherwise mark every untouched day as met.
+    const strip = weekStrip(stats({ mastery_over_time: [day(0, 0)] }), 0)
+    expect(strip.every((d) => d.state === 'open')).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 import { MILESTONES, WORD_COUNT } from '../../lib/rewards'
-import { group } from '../ui/CountUp'
+import { CountUp, group } from '../ui/CountUp'
 import { Icon } from '../ui/Icon'
 
 /**
@@ -27,9 +27,10 @@ export function MasteryHero({
               Mastered
             </p>
             <p className="mt-1.5 flex items-baseline gap-1">
-              <span className="tabular text-[44px] leading-[44px] font-extrabold tracking-[-0.035em] text-ink">
-                {group(mastered)}
-              </span>
+              <CountUp
+                to={mastered}
+                className="text-[44px] leading-[44px] font-extrabold tracking-[-0.035em] text-ink"
+              />
               <span className="text-base leading-none font-semibold text-muted">
                 / {group(WORD_COUNT)}
               </span>
