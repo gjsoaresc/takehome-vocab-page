@@ -13,12 +13,11 @@ writes, SQL-only analytics, and a seeded 120,000-event practice history.
 
 ![One pass through the app: the home hub and streak nudge, searching and rating a word in Learn, a quiz combo, a matching board, a Word Rush run, the Progress dashboard, and the dark theme](docs/media/demo.gif)
 
-One pass over a seeded learner - 62-day streak, 839 words seen, 73 mastered.
-Home hub and streak nudge, Learn (search, reveal, self-rate), a quiz combo, a
-matching board, Word Rush, Progress, dark mode. Recorded in a desktop window,
-so it also shows the device frame the app centres itself in above 880x720. It
-is a scripted browser run against the real stack, so every number on screen
-came out of Postgres. Crisper:
+Six cuts from one pass over a seeded learner - 62-day streak, 839 words seen,
+73 mastered: the home hub, Learn (open, reveal, self-rate), a quiz answer, a
+matching board, Word Rush, and Progress in both themes. It is a scripted
+browser run against the real stack, so every number on screen came out of
+Postgres. The uncut 71-second version, at full resolution, is
 [`docs/media/demo.mp4`](docs/media/demo.mp4).
 
 ## Quickstart (Docker only — no host toolchain needed)
